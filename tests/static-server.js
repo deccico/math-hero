@@ -10,6 +10,8 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json',
+  '.png': 'image/png',
   '.txt': 'text/plain; charset=utf-8',
 };
 

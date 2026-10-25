@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build:css": "tailwindcss -i src/tailwind.css -o site/tailwind.css --minify",
+    "build:icons": "node scripts/make-icons.js",
     "pretest": "npm run build:css",
     "test": "playwright test"
   },

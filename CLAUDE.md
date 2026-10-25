@@ -20,12 +20,18 @@ Addition and subtraction practice for kids (rules in `specs.md`): one static pag
 - The font's OFL license requires `site/fonts/Fredoka-OFL.txt` to ship with it; keep the two together.
 
 ## Offline
-- `site/sw.js` (a service worker) makes the app work offline after one visit: its install stores every file in `FILES`. Keep `FILES` in step with what the page loads; the offline tests fail if a file is missing.
+- `site/sw.js` (a service worker) makes the app work offline after one visit: its install stores every file in `FILES`. Keep `FILES` in step with what the page loads, plus the manifest and icons, which the browser fetches itself, so no page request reveals them missing. The offline tests check both.
 - Network first: every request asks the server, revalidating past the HTTP cache (`cache: 'no-cache'`), so a new deploy shows on the next load. The stored copy answers only when the network fails, returns an error, or takes over 3 seconds; after a timeout, the next 30 seconds use stored copies straight away, so a dead connection costs one wait per page, not one per file. Deploys never need a change to `sw.js` or a version bump.
 - Without `no-cache`, GitHub Pages' `max-age=600` would hide a new version for up to 10 minutes. Navigations are fetched by URL with `redirect: 'manual'`, because Chrome refuses to copy a navigation request and rejects a followed redirect for one.
 - Service workers need http(s), so the page skips registration when opened from disk. Their scope is `/math-hero/`: the address without the trailing slash is outside it and doesn't work offline.
 - In the offline tests, go offline with `stop()` and `reload()`: a reload revalidates, so the browser's HTTP cache cannot pass for the service worker. Check updates with `goto()`, which the HTTP cache would answer with the old version.
 - Safari deletes a site's storage, service worker cache included, after 7 days of Safari use without visiting it. Apps added to the Home Screen with a manifest are exempt.
+
+## Home Screen app
+- `site/manifest.webmanifest` and `site/icons/` make the app installable. On iPhone and iPad this is what keeps the offline copy, because Safari deletes the storage of sites left unvisited for 7 days, but not of Home Screen apps.
+- The icons are drawn by `scripts/make-icons.js`: change the design there and run `npm run build:icons`, then commit the PNGs. It renders HTML in Chromium, inlining the font, because a `setContent` page is `about:blank` and can't load `file://` fonts.
+- Chrome's installability check (`Page.getInstallabilityErrors`) answers nothing useful in Playwright's usual contexts: they are incognito, which always reports `in-incognito`, and the headless shell always reports nothing. The test uses a persistent profile with `channel: 'chromium'`.
+- Every `.png` and `.webmanifest` must be in the test server's content types (`tests/static-server.js`), or it is served as `application/octet-stream`.
 
 ## Deploy
 - GitHub Pages, from `.github/workflows/deploy.yml`: every push to `master` runs the tests and, only if they pass, publishes the `site/` folder. The Pages source is "GitHub Actions", not a branch.

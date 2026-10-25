@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { chromium } = require('@playwright/test');
 const { test: base, expect, PROBLEM_PATTERN, answerCorrectly, loadedFonts } = require('./fixtures');
 const { startServer } = require('./static-server');
 
@@ -69,4 +70,35 @@ test('falls back to the stored version within seconds when the network never ans
   // One network timeout for the whole page, not one per file.
   expect(Date.now() - started).toBeLessThan(5_000);
   await expectPlayable(page);
+});
+
+test('stores the manifest and icons for offline use', async ({ page }) => {
+  await waitForOfflineReady(page);
+
+  // The browser, not the page, fetches these, so only the install step stores them.
+  const missing = await page.evaluate(async () => {
+    const files = ['manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+    const cache = await caches.open('math-hero');
+    const stored = await Promise.all(files.map((file) => cache.match(file)));
+    return files.filter((file, i) => !stored[i]);
+  });
+  expect(missing).toEqual([]);
+});
+
+// Playwright's usual contexts are incognito, where Chrome never offers to install an app,
+// and the headless shell skips the check, so this needs a real profile and full Chromium.
+test('Chrome finds the app installable', async ({ site }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'One browser is enough for this check');
+  const context = await chromium.launchPersistentContext(testInfo.outputPath('profile'), { channel: 'chromium' });
+  try {
+    const page = await context.newPage();
+    await page.goto(site.url);
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+    const cdp = await context.newCDPSession(page);
+
+    expect((await cdp.send('Page.getAppManifest')).errors).toEqual([]);
+    expect((await cdp.send('Page.getInstallabilityErrors')).installabilityErrors).toEqual([]);
+  } finally {
+    await context.close();
+  }
 });
