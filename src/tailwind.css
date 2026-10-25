@@ -1,3 +1,12 @@
+/* Fredoka variable font (weights 300-700, Latin), from @fontsource-variable/fredoka 5.3.0. License: fonts/Fredoka-OFL.txt */
+@font-face {
+  font-family: 'Fredoka';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url(fonts/fredoka-latin-wght-normal.woff2) format('woff2');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

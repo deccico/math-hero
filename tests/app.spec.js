@@ -7,8 +7,11 @@ const MAX_QUESTIONS = 10;
 
 // Every test starts on a fresh app and fails if the page threw or logged an error.
 const test = base.extend({
-  page: async ({ page }, use) => {
+  // Every URL the page requested, from the start of loading.
+  requests: async ({}, use) => use([]),
+  page: async ({ page, requests }, use) => {
     const errors = [];
+    page.on('request', (request) => requests.push(request.url()));
     page.on('pageerror', (err) => errors.push(err.message));
     page.on('console', (msg) => {
       if (msg.type() === 'error') errors.push(msg.text());
@@ -60,11 +63,18 @@ async function sampleProblems(page, count) {
   return texts.map((text) => text.split(' - ').map(Number));
 }
 
-// Tailwind is compiled into site/tailwind.css, so the page runs no third-party code.
-test('styles itself from the compiled stylesheet, with no external scripts', async ({ page }) => {
+// Tailwind and the Fredoka font are bundled in site/, so the page needs no other site.
+test('loads its styles and font from its own site only', async ({ page, requests }) => {
   await expect(page.locator('script[src]')).toHaveCount(0);
   await expect(page.locator('link[rel="stylesheet"][href="tailwind.css"]')).toHaveCount(1);
   await expect(page.locator('#problemDisplay')).toHaveCSS('font-weight', '700');
+
+  const loadedFonts = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return [...document.fonts].filter((font) => font.status === 'loaded').map((font) => font.family.replace(/["']/g, ''));
+  });
+  expect(loadedFonts).toContain('Fredoka');
+  expect(requests.filter((url) => !url.startsWith('file:'))).toEqual([]);
 });
 
 test('starts on question 1 with an empty scoreboard', async ({ page }) => {
