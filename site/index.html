@@ -422,22 +422,32 @@
       }, 400);
     }
 
-    // Listen for the "Enter" key on the input field
-    answerInput.addEventListener('keydown', (e) => {
-      // Ignore Enter while advancing, so a double press can't count one answer twice
-      if (e.key === 'Enter' && !advancing) {
-        const userAnswer = parseInt(answerInput.value, 10);
-        
-        // Ignore empty submissions
-        if (isNaN(userAnswer)) return;
+    // The typed answer, or NaN while the box is empty
+    function typedAnswer() {
+      return parseInt(answerInput.value, 10);
+    }
 
-        const correctAnswer = currentOp.solve(currentA, currentB);
-        
-        if (userAnswer === correctAnswer) {
-          handleSuccess();
-        } else {
-          handleError();
-        }
+    function isRight(answer) {
+      return answer === currentOp.solve(currentA, currentB);
+    }
+
+    // A right answer counts as soon as it is typed; a wrong one only when Enter is pressed.
+    // While advancing, input is ignored, so one answer can't count twice.
+    answerInput.addEventListener('input', () => {
+      if (!advancing && isRight(typedAnswer())) handleSuccess();
+    });
+
+    answerInput.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || advancing) return;
+      const userAnswer = typedAnswer();
+
+      // Ignore empty submissions
+      if (isNaN(userAnswer)) return;
+
+      if (isRight(userAnswer)) {
+        handleSuccess();
+      } else {
+        handleError();
       }
     });
 

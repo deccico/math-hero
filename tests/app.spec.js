@@ -96,6 +96,35 @@ test('a wrong answer shakes, resets the streak and stays on the question', async
   await expect(page.locator('#problemDisplay')).toHaveText(`${problem.a} ${problem.op} ${problem.b}`);
 });
 
+test('a right answer counts as soon as it is typed, without Enter', async ({ page }) => {
+  await openSettings(page);
+  // Additions that carry always have a two-digit answer, so the first digit alone must not count.
+  await setOperations(page, 'add');
+  await page.locator('#settingsDoneBtn').click();
+  const digits = String(solve(await readProblem(page)));
+
+  await page.locator('#answerInput').pressSequentially(digits[0]);
+  await expect(page.locator('#questionCount')).toHaveText('1');
+  await page.locator('#answerInput').pressSequentially(digits[1]);
+
+  await expect(page.locator('#questionCount')).toHaveText('2');
+  await expect(page.locator('#totalCount')).toHaveText('1');
+});
+
+test('a wrong answer waits for Enter', async ({ page }) => {
+  await answerCorrectly(page);
+  await expect(page.locator('#questionCount')).toHaveText('2');
+  const wrong = String(solve(await readProblem(page)) + 1);
+
+  await page.locator('#answerInput').pressSequentially(wrong);
+  await expect(page.locator('#answerInput')).not.toHaveClass(/animate-shake/);
+  await expect(page.locator('#streakCount')).toHaveText('1');
+
+  await page.locator('#answerInput').press('Enter');
+  await expect(page.locator('#answerInput')).toHaveClass(/animate-shake/);
+  await expect(page.locator('#streakCount')).toHaveText('0');
+});
+
 test('pressing Enter twice on a correct answer counts it once', async ({ page }) => {
   await answerCorrectly(page);
   await page.locator('#answerInput').press('Enter');

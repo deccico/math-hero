@@ -2,7 +2,8 @@
 
 ## Game
 - A game is 10 questions. A correct answer scores and moves to the next question; a wrong one resets the streak and stays on the question. The solved total carries over between games.
-- Enter is ignored while the app moves to the next question, so one answer never counts twice.
+- A right answer counts as soon as it is typed, with no Enter needed. A wrong answer counts only when Enter is pressed, so a half-typed answer (the 1 of 13) is never marked wrong.
+- Typing and Enter are ignored while the app moves to the next question, so one answer never counts twice.
 
 ## Problems
 - A problem is `first number - second number` or `first number + second number`.
