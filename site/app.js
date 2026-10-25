@@ -267,10 +267,28 @@ function listAnswers(values) {
   return values.length === 1 ? String(values[0]) : `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
 }
 
-// The questions worth another look, each with why: not right first time, or much slower than the rest
+// A problem asked more than once in a round, as one question: every wrong answer, any hint or
+// answer shown, and its longest time
+function mergeRepeats(questions) {
+  const byProblem = new Map();
+  for (const q of questions) {
+    const seen = byProblem.get(problemText(q));
+    byProblem.set(problemText(q), !seen ? q : {
+      ...seen,
+      wrong: [...new Set([...seen.wrong, ...q.wrong])],
+      hinted: seen.hinted || q.hinted,
+      revealed: seen.revealed || q.revealed,
+      seconds: Math.max(seen.seconds, q.seconds),
+    });
+  }
+  return [...byProblem.values()];
+}
+
+// The problems worth another look, each with why: not right first time, or much slower than
+// the rest. A problem asked twice is listed once.
 function reviewOf(questions) {
   const slow = Math.max(SLOW_SECONDS, 2 * median(questions.map((q) => q.seconds)));
-  return questions.map((q) => {
+  return mergeRepeats(questions).map((q) => {
     const reasons = [];
     if (q.wrong.length > 0) reasons.push(`You tried ${listAnswers(q.wrong)}`);
     if (q.hinted) reasons.push('Used a hint');

@@ -198,7 +198,7 @@ test('the results show the first-try score, the time and the problems that neede
 
   await expect(page.locator('#resultScore')).toHaveText('8 of 10 right first time');
   await expect(page.locator('#resultTime')).toHaveText(/^Time: \d+:\d{2}$/);
-  expect(await reviewedProblems(page)).toEqual(missed);
+  expect(await reviewedProblems(page)).toEqual([...new Set(missed)]);
   await expect(page.locator('#reviewList li').first()).toContainText('You tried');
   await expect(page.locator('#practiceBtn')).toBeVisible();
 });
@@ -228,18 +228,20 @@ test('Practice these again asks exactly the problems to review, until none are l
 
   await page.locator('#practiceBtn').click();
   await expect(page.locator('#roundLabel')).toHaveText('Practice');
-  await expect(page.locator('#questionTotal')).toHaveText('3');
+  const length = new Set(missed).size;
+  await expect(page.locator('#questionTotal')).toHaveText(String(length));
   const asked = [];
-  for (let question = 1; question <= 3; question++) {
+  for (let question = 1; question <= length; question++) {
     const problem = await readProblem(page);
     asked.push(`${problem.a} ${problem.op} ${problem.b}`);
     // Miss the first practice problem again.
     if (question === 1) await answer(page, solve(problem) + 1);
     await answerCorrectly(page);
-    if (question < 3) await expect(page.locator('#questionCount')).toHaveText(String(question + 1));
+    if (question < length) await expect(page.locator('#questionCount')).toHaveText(String(question + 1));
   }
-  expect([...asked].sort()).toEqual([...missed].sort());
-  await expect(page.locator('#resultScore')).toHaveText('2 of 3 right first time');
+  // A problem asked twice in the game is practised once.
+  expect([...asked].sort()).toEqual([...new Set(missed)].sort());
+  await expect(page.locator('#resultScore')).toHaveText(`${length - 1} of ${length} right first time`);
   expect(await reviewedProblems(page)).toEqual([asked[0]]);
 
   await page.locator('#practiceBtn').click();
@@ -251,6 +253,21 @@ test('Practice these again asks exactly the problems to review, until none are l
   await page.locator('#playAgainBtn').click();
   await expect(page.locator('#roundLabel')).toHaveText('Question');
   await expect(page.locator('#questionTotal')).toHaveText(String(MAX_QUESTIONS));
+});
+
+test('a problem asked twice is reviewed and practised once', async ({ page }) => {
+  await openSettings(page);
+  // Only 11 - 2 and 11 - 3 fit, and they alternate.
+  await setRange(page, 'first', 11, 11);
+  await setRange(page, 'second', 2, 3);
+  await page.locator('#settingsDoneBtn').click();
+
+  const missed = await finishGame(page, { miss: [1, 3] });
+
+  expect(missed[0]).toBe(missed[1]);
+  expect(await reviewedProblems(page)).toEqual([missed[0]]);
+  await page.locator('#practiceBtn').click();
+  await expect(page.locator('#questionTotal')).toHaveText('1');
 });
 
 test('changing a setting during practice starts a fresh game', async ({ page }) => {

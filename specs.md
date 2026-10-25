@@ -8,7 +8,7 @@
 ## Results and practice
 - A question is **right first time** when it was answered with no wrong try, no hint and no answer shown.
 - At the end of a round the results show how many questions were right first time ("8 of 10 right first time") and the round's time, from its first question appearing to its last answer.
-- **Look at these again** lists the questions that were not right first time, or were **slow**: more than 10 seconds, and more than twice the round's median time. Each shows its answer and why it is listed (the wrong answers tried, a hint, the answer shown, the time taken).
+- **Look at these again** lists the questions that were not right first time, or were **slow**: more than 10 seconds, and more than twice the round's median time. Each shows its answer and why it is listed (the wrong answers tried, a hint, the answer shown, the time taken). A problem asked more than once in the round is listed once, with the reasons from every time it was asked.
 - **Practice these again** starts a practice round of exactly the listed problems, in a random order, once each. Its results list whatever still needs another look, so practice repeats until everything is right first time. Play Again starts a fresh game.
 - Changing a setting during practice ends it and starts a fresh game, since the practice problems may not fit the new settings.
 
