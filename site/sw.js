@@ -5,7 +5,7 @@
 
 const CACHE = 'math-hero';
 // Everything the page loads, stored at install so one visit is enough to work offline.
-const FILES = ['./', 'tailwind.css', 'fonts/fredoka-latin-wght-normal.woff2'];
+const FILES = ['./', 'app.js', 'tailwind.css', 'fonts/fredoka-latin-wght-normal.woff2'];
 const NETWORK_TIMEOUT_MS = 3000;
 // After one request times out, later ones use the stored copy straight away for this long,
 // so a page on a dead connection waits out the timeout once, not once per file.

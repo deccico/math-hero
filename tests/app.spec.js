@@ -56,8 +56,9 @@ async function setOperations(page, ...keys) {
 }
 
 // Tailwind and the Fredoka font are bundled in site/, so the page needs no other site.
-test('loads its styles and font from its own site only', async ({ page, requests }) => {
-  await expect(page.locator('script[src]')).toHaveCount(0);
+test('loads its script, styles and font from its own site only', async ({ page, requests }) => {
+  await expect(page.locator('script[src]')).toHaveCount(1);
+  await expect(page.locator('script[src="app.js"]')).toHaveCount(1);
   await expect(page.locator('link[rel="stylesheet"][href="tailwind.css"]')).toHaveCount(1);
   await expect(page.locator('#problemDisplay')).toHaveCSS('font-weight', '700');
 
