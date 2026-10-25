@@ -93,8 +93,8 @@
         </div>
       </div>
 
-      <!-- Answer Input -->
-      <div class="flex justify-center mb-8">
+      <!-- Answer Input, with a Check button for keyboards that have no Enter key -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
         <input
           type="number"
           id="answerInput"
@@ -105,6 +105,9 @@
           placeholder="?"
           autofocus
         >
+        <button id="checkBtn" type="button" class="w-48 sm:w-auto bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-2xl py-4 px-6 rounded-3xl shadow-lg transition active:scale-95 focus:outline-none focus:ring-4 focus:ring-indigo-100">
+          Check
+        </button>
       </div>
 
       <!-- Settings Button -->

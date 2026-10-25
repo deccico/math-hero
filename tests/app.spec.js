@@ -126,6 +126,26 @@ test('a wrong answer waits for Enter', async ({ page }) => {
   await expect(page.locator('#streakCount')).toHaveText('0');
 });
 
+// The Check button does what Enter does, for keyboards without Enter (the iPhone number keypad).
+test('the Check button marks a wrong answer, like Enter', async ({ page }) => {
+  await answerCorrectly(page);
+  await expect(page.locator('#questionCount')).toHaveText('2');
+  await page.locator('#answerInput').fill(String(solve(await readProblem(page)) + 1));
+
+  await page.locator('#checkBtn').click();
+
+  await expect(page.locator('#answerInput')).toHaveClass(/animate-shake/);
+  await expect(page.locator('#streakCount')).toHaveText('0');
+  await expect(page.locator('#answerInput')).toBeFocused();
+});
+
+test('the Check button ignores an empty answer box', async ({ page }) => {
+  await page.locator('#checkBtn').click();
+
+  await expect(page.locator('#answerInput')).not.toHaveClass(/animate-shake/);
+  await expect(page.locator('#questionCount')).toHaveText('1');
+});
+
 test('pressing Enter twice on a correct answer counts it once', async ({ page }) => {
   await answerCorrectly(page);
   await page.locator('#answerInput').press('Enter');

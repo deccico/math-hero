@@ -32,6 +32,7 @@ const totalCount = document.getElementById('totalCount');
 const appCard = document.getElementById('appCard');
 const questionCount = document.getElementById('questionCount');
 const playAgainBtn = document.getElementById('playAgainBtn');
+const checkBtn = document.getElementById('checkBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsDoneBtn = document.getElementById('settingsDoneBtn');
 const settingsWarning = document.getElementById('settingsWarning');
@@ -266,8 +267,9 @@ answerInput.addEventListener('input', () => {
   if (!advancing && isRight(typedAnswer())) handleSuccess();
 });
 
-answerInput.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' || advancing) return;
+// Marks the typed answer right or wrong: on Enter, or the Check button where there is no Enter key
+function submitAnswer() {
+  if (advancing) return;
   const userAnswer = typedAnswer();
 
   // Ignore empty submissions
@@ -278,7 +280,15 @@ answerInput.addEventListener('keydown', (e) => {
   } else {
     handleError();
   }
+}
+
+answerInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitAnswer();
 });
+
+// Keep the focus, and the on-screen keyboard, on the answer box when Check is tapped
+checkBtn.addEventListener('mousedown', (e) => e.preventDefault());
+checkBtn.addEventListener('click', submitAnswer);
 
 // Settings: the gear opens them, Done goes back to the same question
 for (const control of Object.values(settingControls)) {
