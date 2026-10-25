@@ -5,11 +5,14 @@ const { pathToFileURL } = require('url');
 const APP_URL = pathToFileURL(path.join(__dirname, '..', 'site', 'index.html')).href;
 const MAX_QUESTIONS = 10;
 
-// Every test starts on a fresh app and fails if the page threw a JavaScript error.
+// Every test starts on a fresh app and fails if the page threw or logged an error.
 const test = base.extend({
   page: async ({ page }, use) => {
     const errors = [];
     page.on('pageerror', (err) => errors.push(err.message));
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(msg.text());
+    });
     await page.goto(APP_URL);
     await use(page);
     expect(errors).toEqual([]);
@@ -56,6 +59,15 @@ async function sampleProblems(page, count) {
   }, count);
   return texts.map((text) => text.split(' - ').map(Number));
 }
+
+// An unpinned CDN URL can change what the page runs without a commit here.
+test('loads every external script from an exact version', async ({ page }) => {
+  const sources = await page.locator('script[src]').evaluateAll((scripts) => scripts.map((s) => s.src));
+  expect(sources.length).toBeGreaterThan(0);
+  for (const src of sources) {
+    expect(src).toMatch(/\/\d+\.\d+\.\d+$/);
+  }
+});
 
 test('starts on question 1 with an empty scoreboard', async ({ page }) => {
   await expect(page.locator('#questionCount')).toHaveText('1');
