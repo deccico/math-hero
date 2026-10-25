@@ -283,6 +283,63 @@ test('changing a setting during practice starts a fresh game', async ({ page }) 
   await expect(page.locator('#questionTotal')).toHaveText(String(MAX_QUESTIONS));
 });
 
+test('two wrong tries show a hint, and a third shows the answer', async ({ page }) => {
+  const problem = await readProblem(page);
+  const right = solve(problem);
+
+  await answer(page, right + 1);
+  await expect(page.locator('#hintText')).toBeHidden();
+  await answer(page, right + 2);
+  // The default problems cross ten, so the hint goes down to ten first.
+  await expect(page.locator('#hintText')).toBeVisible();
+  await expect(page.locator('#hintText')).toContainText(`Go down to ten first: ${problem.a} - ${problem.b} =`);
+  await answer(page, right + 3);
+  await expect(page.locator('#hintText')).toHaveText(`The answer is ${right}. Type it in to go on.`);
+
+  await page.locator('#answerInput').fill(String(right));
+  await expect(page.locator('#questionCount')).toHaveText('2');
+  await expect(page.locator('#hintText')).toBeHidden();
+  expect(await page.evaluate(() => round.questions[0].revealed)).toBe(true);
+  await expect(page.locator('#streakCount')).toHaveText('0');
+});
+
+test('a hint is offered after 20 seconds on a question', async ({ page }) => {
+  await expect(page.locator('#hintBtn')).toBeHidden();
+
+  await page.evaluate(() => { question.startedAt -= 20_000; });
+  await expect(page.locator('#hintBtn')).toBeVisible();
+  await page.locator('#hintBtn').click();
+
+  await expect(page.locator('#hintText')).toBeVisible();
+  await expect(page.locator('#hintBtn')).toBeHidden();
+  await expect(page.locator('#answerInput')).toBeFocused();
+  await answerCorrectly(page);
+  await expect(page.locator('#questionCount')).toHaveText('2');
+  expect(await page.evaluate(() => round.questions[0].hinted)).toBe(true);
+  // A hint is help, not a mistake, so the streak carries on.
+  await expect(page.locator('#streakCount')).toHaveText('1');
+});
+
+test('hints fit the problem: make ten, count, or tens and ones', async ({ page }) => {
+  const hints = await page.evaluate(() => [
+    { a: 13, op: '-', b: 5 }, { a: 32, op: '-', b: 15 }, { a: 8, op: '+', b: 5 }, { a: 27, op: '+', b: 16 },
+    { a: 7, op: '-', b: 3 }, { a: 3, op: '+', b: 4 }, { a: 37, op: '-', b: 12 }, { a: 9, op: '+', b: 0 },
+    { a: 15, op: '-', b: 0 },
+  ].map(hintFor));
+
+  expect(hints).toEqual([
+    'Go down to ten first: 13 - 5 = 13 - 3 - 2 = 10 - 2',
+    'Go down to ten first: 32 - 15 = 32 - 2 - 13 = 30 - 13',
+    'Make ten first: 8 + 5 = 8 + 2 + 3 = 10 + 3',
+    'Make ten first: 27 + 16 = 27 + 3 + 13 = 30 + 13',
+    'Count back 3 from 7: 6, 5, 4',
+    'Count on 4 from 3: 4, 5, 6, 7',
+    'Tens and ones: 30 - 10 = 20 and 7 - 2 = 5',
+    'Adding 0 leaves 9 as it is.',
+    'Taking away 0 leaves 15 as it is.',
+  ]);
+});
+
 test('default settings give teen subtractions that need borrowing', async ({ page }) => {
   for (const problem of await sampleProblems(page, 200)) {
     expect(problem.op).toBe('-');

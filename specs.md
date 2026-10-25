@@ -5,6 +5,15 @@
 - A right answer counts as soon as it is typed, with no Enter needed. A wrong answer counts only when Enter is pressed or the Check button is tapped (for keyboards with no Enter key, like the iPhone number keypad), so a half-typed answer (the 1 of 13) is never marked wrong.
 - Typing and Enter are ignored while the app moves to the next question, so one answer never counts twice.
 
+## Help when stuck
+- After 20 seconds on a question, a "Need a hint?" button appears. After 2 wrong tries the hint shows by itself, and after 3 the answer shows ("The answer is 8. Type it in to go on."); the child types it to move on.
+- The hint fits the problem:
+  - crossing ten goes through ten: 13 - 5 = 13 - 3 - 2 = 10 - 2, and 8 + 5 = 8 + 2 + 3 = 10 + 3, also with a two-digit second number (32 - 15 = 32 - 2 - 13 = 30 - 13);
+  - two one-digit numbers count on or back: Count back 3 from 7: 6, 5, 4;
+  - otherwise tens and ones separately: 30 - 10 = 20 and 7 - 2 = 5;
+  - adding or taking away 0 says the number stays as it is.
+- A hint keeps the streak going (a wrong try has already reset it); a question whose answer was shown resets the streak to 0. Both stop the question counting as right first time.
+
 ## Results and practice
 - A question is **right first time** when it was answered with no wrong try, no hint and no answer shown.
 - At the end of a round the results show how many questions were right first time ("8 of 10 right first time") and the round's time, from its first question appearing to its last answer.

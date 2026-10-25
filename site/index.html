@@ -99,6 +99,12 @@
         </div>
       </div>
 
+      <!-- Help when stuck: a hint offered after a while, shown after two wrong tries, the answer after three -->
+      <div class="text-center">
+        <button id="hintBtn" type="button" class="hidden mb-6 px-4 py-2 rounded-full bg-amber-100 text-amber-800 font-semibold text-lg hover:bg-amber-200 focus:outline-none focus:ring-4 focus:ring-amber-100 transition-colors">💡 Need a hint?</button>
+        <p id="hintText" role="status" class="hidden whitespace-pre-line mb-6 rounded-2xl border-2 border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 font-semibold text-lg"></p>
+      </div>
+
       <!-- Answer Input, with a Check button for keyboards that have no Enter key -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
         <input

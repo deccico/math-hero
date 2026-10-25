@@ -14,6 +14,11 @@ let question = null;
 const GAME_LENGTH = 10;
 // A question is slow when it took longer than this, and more than twice the round's median
 const SLOW_SECONDS = 10;
+// Help when stuck: a hint is offered after this long on a question, and shown after this many
+// wrong tries; the answer is shown after a few more
+const HINT_AFTER_SECONDS = 20;
+const HINT_AFTER_WRONG = 2;
+const ANSWER_AFTER_WRONG = 3;
 
 // Settings, remembered on this device. The defaults are the original game: a teen minus one digit, with borrowing.
 const SETTINGS_KEY = 'math-hero-settings';
@@ -45,6 +50,8 @@ const resultTime = document.getElementById('resultTime');
 const reviewBox = document.getElementById('reviewBox');
 const reviewList = document.getElementById('reviewList');
 const checkBtn = document.getElementById('checkBtn');
+const hintBtn = document.getElementById('hintBtn');
+const hintText = document.getElementById('hintText');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsDoneBtn = document.getElementById('settingsDoneBtn');
 const settingsWarning = document.getElementById('settingsWarning');
@@ -201,8 +208,59 @@ function ask({ a, op, b }) {
   const operation = OPERATIONS.find((o) => o.symbol === op);
   question = { a, op, b, answer: operation.solve(a, b), wrong: [], hinted: false, revealed: false, startedAt: Date.now(), seconds: 0 };
   problemDisplay.textContent = problemText(question);
+  hintBtn.classList.add('hidden');
+  hintText.classList.add('hidden');
   answerInput.value = '';
   answerInput.focus();
+}
+
+// A hint that fits the problem: through ten when it crosses ten, counting for small numbers,
+// otherwise tens and ones separately
+function hintFor({ a, op, b }) {
+  const add = op === '+';
+  if (b === 0) return add ? `Adding 0 leaves ${a} as it is.` : `Taking away 0 leaves ${a} as it is.`;
+  if (crossesTen(OPERATIONS.find((o) => o.symbol === op), a, b)) {
+    if (add) {
+      const toTen = 10 - (a % 10);
+      return `Make ten first: ${a} + ${b} = ${a} + ${toTen} + ${b - toTen} = ${a + toTen} + ${b - toTen}`;
+    }
+    const ones = a % 10;
+    return `Go down to ten first: ${a} - ${b} = ${a} - ${ones} - ${b - ones} = ${a - ones} - ${b - ones}`;
+  }
+  if (a < 10 && b < 10) {
+    const steps = Array.from({ length: b }, (_, i) => (add ? a + i + 1 : a - i - 1));
+    return `Count ${add ? 'on' : 'back'} ${b} from ${a}: ${steps.join(', ')}`;
+  }
+  const tens = (n) => n - (n % 10);
+  const sum = (x, y) => (add ? x + y : x - y);
+  return `Tens and ones: ${tens(a)} ${op} ${tens(b)} = ${sum(tens(a), tens(b))} and ${a % 10} ${op} ${b % 10} = ${sum(a % 10, b % 10)}`;
+}
+
+function showHelp(text) {
+  hintText.textContent = text;
+  hintText.classList.remove('hidden');
+  hintBtn.classList.add('hidden');
+}
+
+// Shows a hint's label on one line and its steps below, wrapping only between steps ("= ..."),
+// so a narrow screen never splits "30 - 13" across lines
+function showHint() {
+  question.hinted = true;
+  const hint = hintFor(question);
+  const colon = hint.indexOf(': ');
+  const steps = hint.slice(colon + 2).split(' = ').map((step) => step.replace(/ /g, '\u00a0')).join(' = ');
+  showHelp(`${hint.slice(0, colon + 1)}\n${steps}`);
+}
+
+function showAnswer() {
+  question.revealed = true;
+  showHelp(`The answer is ${question.answer}. Type it in to go on.`);
+}
+
+// Once a second: offer a hint when the question on screen has taken a while
+function tick() {
+  if (currentScreen !== 'game' || advancing || question.hinted || question.revealed) return;
+  if (Date.now() - question.startedAt >= HINT_AFTER_SECONDS * 1000) hintBtn.classList.remove('hidden');
 }
 
 // Asks a new problem that fits the settings
@@ -344,7 +402,8 @@ function handleSuccess() {
   advancing = true;
   question.seconds = (Date.now() - question.startedAt) / 1000;
   round.questions.push(question);
-  streak++;
+  // A hint keeps the streak going; being shown the answer does not
+  streak = question.revealed ? 0 : streak + 1;
   totalSolved++;
 
   // Update score display
@@ -370,6 +429,8 @@ function handleSuccess() {
 // Handle wrong answer visually
 function handleError(wrongAnswer) {
   question.wrong.push(wrongAnswer);
+  if (question.wrong.length >= ANSWER_AFTER_WRONG) showAnswer();
+  else if (question.wrong.length >= HINT_AFTER_WRONG) showHint();
   streak = 0;
   streakCount.textContent = streak;
 
@@ -425,9 +486,12 @@ answerInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') submitAnswer();
 });
 
-// Keep the focus, and the on-screen keyboard, on the answer box when Check is tapped
-checkBtn.addEventListener('mousedown', (e) => e.preventDefault());
+// Keep the focus, and the on-screen keyboard, on the answer box when Check or the hint is tapped
+for (const button of [checkBtn, hintBtn]) {
+  button.addEventListener('mousedown', (e) => e.preventDefault());
+}
 checkBtn.addEventListener('click', submitAnswer);
+hintBtn.addEventListener('click', showHint);
 
 // Settings: the gear opens them, Done goes back to the same question
 for (const control of Object.values(settingControls)) {
@@ -464,6 +528,7 @@ document.body.addEventListener('click', (e) => {
 
 // Start the first game on load
 startRound('game');
+setInterval(tick, 1000);
 
 // Offline support (sw.js): the newest version when online, the stored one when offline.
 // Service workers need http(s), so opening the file from disk skips this.
