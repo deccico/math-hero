@@ -20,6 +20,13 @@ const HINT_AFTER_SECONDS = 20;
 const HINT_AFTER_WRONG = 2;
 const ANSWER_AFTER_WRONG = 3;
 
+// Every finished round, kept on this device, oldest first
+const HISTORY_KEY = 'math-hero-history';
+const HISTORY_LIMIT = 100;
+// The trend compares the older and newer halves of this many recent games with the current settings
+const TREND_GAMES = 10;
+const TREND_MIN_GAMES = 4;
+
 // Settings, remembered on this device. The defaults are the original game: a teen minus one digit, with borrowing.
 const SETTINGS_KEY = 'math-hero-settings';
 const DEFAULT_SETTINGS = { subtract: true, add: false, firstMin: 11, firstMax: 19, secondMin: 1, secondMax: 9, crossTen: true };
@@ -49,6 +56,17 @@ const resultScore = document.getElementById('resultScore');
 const resultTime = document.getElementById('resultTime');
 const reviewBox = document.getElementById('reviewBox');
 const reviewList = document.getElementById('reviewList');
+const historyOverview = document.getElementById('historyOverview');
+const historyList = document.getElementById('historyList');
+const historyEmpty = document.getElementById('historyEmpty');
+const historyDetail = document.getElementById('historyDetail');
+const statGames = document.getElementById('statGames');
+const statAccuracy = document.getElementById('statAccuracy');
+const statPace = document.getElementById('statPace');
+const trendText = document.getElementById('trendText');
+const detailTitle = document.getElementById('detailTitle');
+const detailSummary = document.getElementById('detailSummary');
+const detailReview = document.getElementById('detailReview');
 const checkBtn = document.getElementById('checkBtn');
 const hintBtn = document.getElementById('hintBtn');
 const hintText = document.getElementById('hintText');
@@ -59,6 +77,7 @@ const screens = {
   game: document.getElementById('gameScreen'),
   settings: document.getElementById('settingsScreen'),
   celebration: document.getElementById('celebrationScreen'),
+  progress: document.getElementById('progressScreen'),
 };
 // The form control for each setting
 const settingControls = {
@@ -394,7 +413,135 @@ function showResults(kind, questions, seconds) {
 }
 
 function finishRound() {
-  showResults(round.kind, round.questions, (Date.now() - round.startedAt) / 1000);
+  const seconds = (Date.now() - round.startedAt) / 1000;
+  saveToHistory(round, seconds);
+  showResults(round.kind, round.questions, seconds);
+}
+
+// "Subtraction, 11-19 and 1-9, crossing ten"
+function settingsSummary(s) {
+  const operations = [s.subtract && 'subtraction', s.add && 'addition'].filter(Boolean).join(' and ');
+  const ranges = `${s.firstMin}-${s.firstMax} and ${s.secondMin}-${s.secondMax}`;
+  const summary = `${operations}, ${ranges}${s.crossTen ? ', crossing ten' : ''}`;
+  return summary[0].toUpperCase() + summary.slice(1);
+}
+
+// Games with equal keys had the same kind of problems, so their scores and times compare
+function settingsKey(s) {
+  return JSON.stringify([s.subtract, s.add, s.firstMin, s.firstMax, s.secondMin, s.secondMax, s.crossTen]);
+}
+
+function loadHistory() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HISTORY_KEY));
+    return Array.isArray(saved) ? saved : [];
+  } catch (err) {
+    console.warn('The saved progress could not be read, so it starts empty:', err);
+    return [];
+  }
+}
+
+function saveToHistory({ kind, questions }, seconds) {
+  const record = {
+    date: new Date().toISOString(),
+    kind,
+    label: kind === 'practice' ? 'Practice' : settingsSummary(settings),
+    key: settingsKey(settings),
+    seconds,
+    questions: questions.map(({ startedAt, ...q }) => q),
+  };
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify([...loadHistory(), record].slice(-HISTORY_LIMIT)));
+  } catch (err) {
+    console.warn('This round could not be saved on this device:', err);
+  }
+}
+
+// Right first time and time per question, over some saved rounds
+function totals(records) {
+  const questions = records.flatMap((r) => r.questions);
+  const seconds = records.reduce((sum, r) => sum + r.seconds, 0);
+  return {
+    accuracy: questions.length ? `${Math.round((100 * questions.filter(firstTry).length) / questions.length)}%` : '-',
+    pace: questions.length ? `${(seconds / questions.length).toFixed(1)} s` : '-',
+  };
+}
+
+function trendFor(games) {
+  const recent = games.filter((g) => g.key === settingsKey(settings)).slice(-TREND_GAMES);
+  if (recent.length < TREND_MIN_GAMES) return 'Finish a few more games with these settings to see a trend.';
+  const older = totals(recent.slice(0, Math.floor(recent.length / 2)));
+  const newer = totals(recent.slice(Math.floor(recent.length / 2)));
+  return `With these settings lately: ${older.accuracy} → ${newer.accuracy} right first time, ${older.pace} → ${newer.pace} per question.`;
+}
+
+function firstTryScore(questions) {
+  return `${questions.filter(firstTry).length}/${questions.length}`;
+}
+
+function line(className, text) {
+  const span = document.createElement('span');
+  span.className = className;
+  span.textContent = text;
+  return span;
+}
+
+function historyItem(record) {
+  const item = document.createElement('li');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'w-full flex items-center justify-between gap-3 rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-2 text-left hover:border-indigo-200 hover:bg-indigo-50 transition-colors';
+  const what = document.createElement('span');
+  what.className = 'flex flex-col';
+  what.append(
+    line('text-sm font-semibold text-slate-700', record.label),
+    line('text-xs text-slate-400', new Date(record.date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })),
+  );
+  const score = document.createElement('span');
+  score.className = 'flex flex-col items-end whitespace-nowrap';
+  score.append(
+    line('text-lg font-bold text-slate-800', firstTryScore(record.questions)),
+    line('text-xs text-slate-400', formatTime(record.seconds)),
+  );
+  button.append(what, score);
+  button.addEventListener('click', () => showHistoryDetail(record));
+  item.append(button);
+  return item;
+}
+
+function showHistoryDetail(record) {
+  detailTitle.textContent = record.label;
+  detailSummary.textContent = `${firstTryScore(record.questions)} right first time · Time: ${formatTime(record.seconds)}`;
+  const review = reviewOf(record.questions);
+  if (review.length) {
+    detailReview.replaceChildren(...review.map(reviewItem));
+  } else {
+    const item = document.createElement('li');
+    item.className = 'rounded-2xl border-2 border-emerald-100 bg-emerald-50 px-4 py-2 font-semibold text-emerald-800';
+    item.textContent = 'Everything right first time!';
+    detailReview.replaceChildren(item);
+  }
+  historyOverview.classList.add('hidden');
+  historyDetail.classList.remove('hidden');
+}
+
+// The screen Back returns to from the progress screen
+let progressReturn = 'game';
+
+function showProgress() {
+  const history = loadHistory();
+  const games = history.filter((r) => r.kind === 'game');
+  const all = totals(games);
+  statGames.textContent = games.length;
+  statAccuracy.textContent = all.accuracy;
+  statPace.textContent = all.pace;
+  trendText.textContent = trendFor(games);
+  historyList.replaceChildren(...history.slice().reverse().map(historyItem));
+  historyEmpty.classList.toggle('hidden', history.length > 0);
+  historyOverview.classList.remove('hidden');
+  historyDetail.classList.add('hidden');
+  progressReturn = currentScreen;
+  showScreen('progress');
 }
 
 // Handle correct answer visually
@@ -512,6 +659,19 @@ settingsDoneBtn.addEventListener('click', () => {
 playAgainBtn.addEventListener('click', () => {
   showScreen('game');
   startRound('game');
+});
+
+document.getElementById('resultsProgressBtn').addEventListener('click', showProgress);
+document.getElementById('settingsProgressBtn').addEventListener('click', showProgress);
+
+// Back leaves an old round's review for the list, then the list for where it was opened from
+document.getElementById('progressBackBtn').addEventListener('click', () => {
+  if (!historyDetail.classList.contains('hidden')) {
+    historyDetail.classList.add('hidden');
+    historyOverview.classList.remove('hidden');
+  } else {
+    showScreen(progressReturn);
+  }
 });
 
 practiceBtn.addEventListener('click', () => {

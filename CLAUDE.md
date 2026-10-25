@@ -6,7 +6,7 @@ Addition and subtraction practice for kids (rules in `specs.md`): one static pag
 - Set up once with `npm install && npx playwright install chromium`, then run `npm test`. It rebuilds `site/tailwind.css` first (`pretest`).
 - The tests open `site/index.html` from disk and need no network. They fail on any console error, and on any request outside the page's own files.
 - `tests/fixtures.js` holds the shared fixtures and helpers. `tests/offline.spec.js` serves a copy of `site/` over HTTP instead (`tests/static-server.js`), the way GitHub Pages does: under `/math-hero/`, with `Cache-Control: max-age=600`.
-- The tests call the page's global `generateProblem()` to sample many problems. Keep `site/app.js` a classic (non-module) script, or change `sampleProblems` in `tests/app.spec.js` with it.
+- The tests reach into the page's globals with `page.evaluate`: they call `generateProblem()`, `hintFor()` and `settingsSummary()`, and set `question.startedAt` back to fake a slow question or a 20-second wait instead of installing a fake clock (which would also freeze the 350 ms move to the next question). So keep `site/app.js` a classic script with top-level declarations: no module, no IIFE wrapper.
 
 ## Tailwind
 - Tailwind 3.4.17 is compiled, not loaded from a CDN: `npm run build:css` builds `src/tailwind.css` with `tailwind.config.js` into a minified `site/tailwind.css`. The built file is committed, so `index.html` works straight from disk; after changing classes, rebuild and commit it. CI fails if the committed copy differs from a fresh build.

@@ -21,6 +21,13 @@
 - **Practice these again** starts a practice round of exactly the listed problems, in a random order, once each. Its results list whatever still needs another look, so practice repeats until everything is right first time. Play Again starts a fresh game.
 - Changing a setting during practice ends it and starts a fresh game, since the practice problems may not fit the new settings.
 
+## Progress
+- Every finished round is saved on the device (`localStorage`, key `math-hero-history`), the latest 100 kept: its date, the settings it was played with, its time, and each question (the problem, wrong answers, hint, answer shown, time). Unreadable saved progress starts empty.
+- The Progress screen opens from the results and from Settings, and Back returns there. It shows:
+  - totals over games (practice rounds excluded): games played, the share of questions right first time, and the average time per question;
+  - the trend for the current settings: of the latest 10 games played with the same problem settings, the older half against the newer half, once there are at least 4;
+  - every saved round, newest first, including practice rounds. Opening one shows its review, the same as the results screen would have.
+
 ## Problems
 - A problem is `first number - second number` or `first number + second number`.
 - Subtraction answers are never negative; zero is allowed (7 - 7).

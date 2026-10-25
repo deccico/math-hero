@@ -340,6 +340,104 @@ test('hints fit the problem: make ten, count, or tens and ones', async ({ page }
   ]);
 });
 
+// Saves games in the progress history, as the app does: `results` lists, for each game in order,
+// how many of its 10 questions were right first time and how many seconds each took.
+async function seedHistory(page, results) {
+  await page.evaluate((games) => {
+    const records = games.map(({ right, seconds }, i) => ({
+      date: new Date(Date.UTC(2026, 9, 1 + i)).toISOString(),
+      kind: 'game',
+      label: settingsSummary(settings),
+      key: settingsKey(settings),
+      seconds: seconds * 10,
+      questions: Array.from({ length: 10 }, (_, n) => ({
+        a: 13, op: '-', b: 5, answer: 8, wrong: n < right ? [] : [9], hinted: false, revealed: false, seconds,
+      })),
+    }));
+    localStorage.setItem('math-hero-history', JSON.stringify(records));
+  }, results);
+  await page.reload();
+}
+
+test('a finished game is saved, with its review, in the progress history', async ({ page }) => {
+  const missed = await finishGame(page, { miss: [3] });
+
+  await page.locator('#resultsProgressBtn').click();
+  await expect(page.locator('#progressScreen')).toBeVisible();
+  await expect(page.locator('#statGames')).toHaveText('1');
+  await expect(page.locator('#statAccuracy')).toHaveText('90%');
+  await expect(page.locator('#historyList li')).toHaveCount(1);
+  await expect(page.locator('#historyList li')).toContainText('9/10');
+  await expect(page.locator('#historyList li')).toContainText('Subtraction, 11-19 and 1-9, crossing ten');
+
+  await page.locator('#historyList li button').click();
+  await expect(page.locator('#historyDetail')).toBeVisible();
+  expect(await page.locator('#detailReview li').evaluateAll((items) => items.map((item) => item.dataset.problem))).toEqual(missed);
+
+  await page.locator('#progressBackBtn').click();
+  await expect(page.locator('#historyList')).toBeVisible();
+  await page.locator('#progressBackBtn').click();
+  await expect(page.locator('#celebrationScreen')).toBeVisible();
+  // Looking at an old game must not change what "Practice these again" practises.
+  await page.locator('#practiceBtn').click();
+  await expect(page.locator('#questionTotal')).toHaveText('1');
+});
+
+test('the progress totals and trend come from the saved games', async ({ page }) => {
+  await seedHistory(page, [
+    { right: 5, seconds: 9 }, { right: 6, seconds: 8 }, { right: 8, seconds: 6 }, { right: 9, seconds: 5 },
+  ]);
+
+  await openSettings(page);
+  await page.locator('#settingsProgressBtn').click();
+
+  await expect(page.locator('#statGames')).toHaveText('4');
+  await expect(page.locator('#statAccuracy')).toHaveText('70%');
+  await expect(page.locator('#statPace')).toHaveText('7.0 s');
+  await expect(page.locator('#trendText')).toHaveText(
+    'With these settings lately: 55% → 85% right first time, 8.5 s → 5.5 s per question.',
+  );
+  // Most recent first
+  await expect(page.locator('#historyList li').first()).toContainText('9/10');
+  await page.locator('#progressBackBtn').click();
+  await expect(page.locator('#settingsScreen')).toBeVisible();
+});
+
+test('practice rounds are listed but not counted as games', async ({ page }) => {
+  await finishGame(page, { miss: [1] });
+  await page.locator('#practiceBtn').click();
+  await answerCorrectly(page);
+  await expect(page.locator('#celebrationScreen')).toBeVisible();
+
+  await page.locator('#resultsProgressBtn').click();
+
+  await expect(page.locator('#historyList li')).toHaveCount(2);
+  await expect(page.locator('#historyList li').first()).toContainText('Practice');
+  await expect(page.locator('#statGames')).toHaveText('1');
+  await expect(page.locator('#trendText')).toContainText('Finish a few more games');
+});
+
+test('the history keeps the latest 100 rounds', async ({ page }) => {
+  await seedHistory(page, Array.from({ length: 100 }, () => ({ right: 10, seconds: 3 })));
+
+  await finishGame(page, { miss: [1] });
+
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('math-hero-history')));
+  expect(saved).toHaveLength(100);
+  expect(saved[saved.length - 1].questions.filter((q) => q.wrong.length === 0)).toHaveLength(9);
+});
+
+test('an unreadable history starts empty', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('math-hero-history', '{not json'));
+  await page.reload();
+
+  await openSettings(page);
+  await page.locator('#settingsProgressBtn').click();
+
+  await expect(page.locator('#statGames')).toHaveText('0');
+  await expect(page.locator('#historyEmpty')).toBeVisible();
+});
+
 test('default settings give teen subtractions that need borrowing', async ({ page }) => {
   for (const problem of await sampleProblems(page, 200)) {
     expect(problem.op).toBe('-');

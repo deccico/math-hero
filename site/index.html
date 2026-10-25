@@ -171,6 +171,46 @@
       <button id="settingsDoneBtn" type="button" class="bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-2xl py-4 px-8 rounded-full shadow-lg transition w-full">
         Done
       </button>
+      <div class="text-center mt-3">
+        <button id="settingsProgressBtn" type="button" class="px-4 py-2 rounded-full text-slate-500 font-semibold text-lg hover:text-indigo-600 hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-indigo-100 transition-colors">📈 Progress</button>
+      </div>
+    </div>
+
+    <!-- Progress Screen: the games saved on this device -->
+    <div id="progressScreen" class="hidden">
+      <h2 class="text-3xl font-bold text-slate-800 text-center mb-6">Progress</h2>
+
+      <div id="historyOverview">
+        <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4 text-center">
+          <div class="rounded-2xl bg-slate-50 border-2 border-slate-100 px-1 py-3 sm:p-3">
+            <div id="statGames" class="whitespace-nowrap text-xl sm:text-3xl font-bold text-indigo-600">0</div>
+            <div class="text-xs font-bold uppercase sm:tracking-wide text-slate-400">Games</div>
+          </div>
+          <div class="rounded-2xl bg-slate-50 border-2 border-slate-100 px-1 py-3 sm:p-3">
+            <div id="statAccuracy" class="whitespace-nowrap text-xl sm:text-3xl font-bold text-indigo-600">-</div>
+            <div class="text-xs font-bold uppercase sm:tracking-wide text-slate-400">Right first time</div>
+          </div>
+          <div class="rounded-2xl bg-slate-50 border-2 border-slate-100 px-1 py-3 sm:p-3">
+            <div id="statPace" class="whitespace-nowrap text-xl sm:text-3xl font-bold text-indigo-600">-</div>
+            <div class="text-xs font-bold uppercase sm:tracking-wide text-slate-400">Per question</div>
+          </div>
+        </div>
+        <p id="trendText" class="text-slate-600 font-semibold text-center mb-6"></p>
+
+        <h3 class="text-slate-500 font-bold mb-3 uppercase text-sm tracking-wide">Recent rounds</h3>
+        <p id="historyEmpty" class="text-slate-500 mb-6">No games yet. Finish a game to see it here.</p>
+        <ul id="historyList" class="space-y-2 max-h-72 overflow-y-auto mb-6"></ul>
+      </div>
+
+      <div id="historyDetail" class="hidden">
+        <h3 id="detailTitle" class="text-xl font-bold text-slate-800"></h3>
+        <p id="detailSummary" class="text-slate-600 mb-4"></p>
+        <ul id="detailReview" class="space-y-2 max-h-72 overflow-y-auto mb-6"></ul>
+      </div>
+
+      <button id="progressBackBtn" type="button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-2xl py-4 px-8 rounded-full shadow-lg transition w-full">
+        Back
+      </button>
     </div>
 
     <!-- Results Screen: the score, the time, and the problems worth another look -->
@@ -191,6 +231,7 @@
       <button id="playAgainBtn" type="button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-2xl py-4 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 w-full">
         Play Again
       </button>
+      <button id="resultsProgressBtn" type="button" class="mt-3 px-4 py-2 rounded-full text-slate-500 font-semibold text-lg hover:text-indigo-600 hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-indigo-100 transition-colors">📈 Progress</button>
     </div>
 
   </div>
