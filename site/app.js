@@ -11,7 +11,6 @@ let currentScreen = 'game';
 let round = null;
 // The question on screen: { a, op, b, answer, wrong: [answers], hinted, revealed, startedAt, seconds }
 let question = null;
-const GAME_LENGTH = 10;
 // A question is slow when it took longer than this, and more than twice the round's median
 const SLOW_SECONDS = 10;
 // Help when stuck: a hint is offered after this long on a question, and shown after this many
@@ -29,7 +28,11 @@ const TREND_MIN_GAMES = 4;
 
 // Settings, remembered on this device. The defaults are the original game: a teen minus one digit, with borrowing.
 const SETTINGS_KEY = 'math-hero-settings';
-const DEFAULT_SETTINGS = { subtract: true, add: false, firstMin: 11, firstMax: 19, secondMin: 1, secondMax: 9, crossTen: true };
+const DEFAULT_SETTINGS = {
+  subtract: true, add: false, firstMin: 11, firstMax: 19, secondMin: 1, secondMax: 9, crossTen: true, questions: 10, showTimer: false,
+};
+// The game lengths to choose from
+const QUESTION_COUNTS = [5, 10, 20];
 const LOWEST_NUMBER = 0;
 const HIGHEST_NUMBER = 99;
 // Each number range, as its lowest and highest setting
@@ -54,6 +57,9 @@ const resultEmoji = document.getElementById('resultEmoji');
 const resultTitle = document.getElementById('resultTitle');
 const resultScore = document.getElementById('resultScore');
 const resultTime = document.getElementById('resultTime');
+const resultBest = document.getElementById('resultBest');
+const timerBox = document.getElementById('timerBox');
+const timerDisplay = document.getElementById('timerDisplay');
 const reviewBox = document.getElementById('reviewBox');
 const reviewList = document.getElementById('reviewList');
 const historyOverview = document.getElementById('historyOverview');
@@ -88,6 +94,8 @@ const settingControls = {
   secondMin: document.getElementById('secondMin'),
   secondMax: document.getElementById('secondMax'),
   crossTen: document.getElementById('crossTenToggle'),
+  questions: document.getElementById('questionsSelect'),
+  showTimer: document.getElementById('timerToggle'),
 };
 
 // Generate a random integer between min and max (inclusive)
@@ -119,15 +127,17 @@ function problemPools(s) {
 }
 
 // Makes settings usable: whole numbers within the limits, each range's lowest no higher than
-// its highest (the end just edited stays put), and at least one operation ticked
+// its highest (the end just edited stays put), at least one operation ticked, and a game length
+// from the choices. Anything missing, as in settings saved by an older version, gets its default.
 function sanitizeSettings(s, editedKey) {
   const clean = { ...DEFAULT_SETTINGS };
   for (const key of Object.keys(clean)) {
     if (typeof clean[key] === 'boolean' && typeof s[key] === 'boolean') clean[key] = s[key];
-    if (typeof clean[key] === 'number' && Number.isInteger(s[key])) {
+    if (RANGES.flat().includes(key) && Number.isInteger(s[key])) {
       clean[key] = Math.min(HIGHEST_NUMBER, Math.max(LOWEST_NUMBER, s[key]));
     }
   }
+  if (QUESTION_COUNTS.includes(s.questions)) clean.questions = s.questions;
   for (const [low, high] of RANGES) {
     if (clean[low] > clean[high]) {
       if (editedKey === high) clean[low] = clean[high];
@@ -205,9 +215,11 @@ function handleSettingsChange(e) {
   if (settingsProblem(next).usable) {
     settings = next;
     saveSettings();
-    // Practice problems may not fit the new settings, so a change during practice starts a game
-    if (round.kind === 'practice') startRound('game');
-    else generateProblem();
+    // A new length starts a new game. So does any change during practice, since the practice
+    // problems may not fit the new settings.
+    if (editedKey === 'questions' || round.kind === 'practice') startRound('game');
+    else if (editedKey !== 'showTimer') generateProblem();
+    showTimer();
   }
 }
 
@@ -276,9 +288,12 @@ function showAnswer() {
   showHelp(`The answer is ${question.answer}. Type it in to go on.`);
 }
 
-// Once a second: offer a hint when the question on screen has taken a while
+// Once a second during a game: update the timer, and offer a hint when the question on screen
+// has taken a while
 function tick() {
-  if (currentScreen !== 'game' || advancing || question.hinted || question.revealed) return;
+  if (currentScreen !== 'game') return;
+  showTimer();
+  if (advancing || question.hinted || question.revealed) return;
   if (Date.now() - question.startedAt >= HINT_AFTER_SECONDS * 1000) hintBtn.classList.remove('hidden');
 }
 
@@ -311,7 +326,7 @@ function startRound(kind, problems = []) {
   round = {
     kind,
     practice: shuffled(problems),
-    length: kind === 'practice' ? problems.length : GAME_LENGTH,
+    length: kind === 'practice' ? problems.length : settings.questions,
     questions: [],
     startedAt: Date.now(),
   };
@@ -319,7 +334,14 @@ function startRound(kind, problems = []) {
   streakCount.textContent = streak;
   roundLabel.textContent = kind === 'practice' ? 'Practice' : 'Question';
   questionTotal.textContent = round.length;
+  showTimer();
   nextQuestion();
+}
+
+// The round's time so far, when the timer is turned on
+function showTimer() {
+  timerBox.classList.toggle('hidden', !settings.showTimer);
+  timerDisplay.textContent = formatTime((Date.now() - round.startedAt) / 1000);
 }
 
 function nextQuestion() {
@@ -414,8 +436,17 @@ function showResults(kind, questions, seconds) {
 
 function finishRound() {
   const seconds = (Date.now() - round.startedAt) / 1000;
+  const best = round.kind === 'game' && settings.showTimer ? bestTimeMessage(seconds) : '';
   saveToHistory(round, seconds);
   showResults(round.kind, round.questions, seconds);
+  resultBest.textContent = best;
+  resultBest.classList.toggle('hidden', !best);
+}
+
+// "New best time!", or the best so far, against earlier games with the same settings
+function bestTimeMessage(seconds) {
+  const best = Math.min(...loadHistory().filter((r) => r.kind === 'game' && r.key === settingsKey(settings)).map((r) => r.seconds));
+  return seconds < best ? 'New best time!' : `Best: ${formatTime(best)}`;
 }
 
 // "Subtraction, 11-19 and 1-9, crossing ten"
@@ -426,9 +457,10 @@ function settingsSummary(s) {
   return summary[0].toUpperCase() + summary.slice(1);
 }
 
-// Games with equal keys had the same kind of problems, so their scores and times compare
+// Games with equal keys had the same problems and length, so their scores and times compare.
+// Showing the timer doesn't change the game, so it is left out.
 function settingsKey(s) {
-  return JSON.stringify([s.subtract, s.add, s.firstMin, s.firstMax, s.secondMin, s.secondMax, s.crossTen]);
+  return JSON.stringify([s.subtract, s.add, s.firstMin, s.firstMax, s.secondMin, s.secondMax, s.crossTen, s.questions]);
 }
 
 function loadHistory() {

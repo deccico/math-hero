@@ -4,8 +4,8 @@ Addition and subtraction practice for kids (rules in `specs.md`): one static pag
 
 ## Test
 - Set up once with `npm install && npx playwright install chromium`, then run `npm test`. It rebuilds `site/tailwind.css` first (`pretest`).
-- The tests open `site/index.html` from disk and need no network. They fail on any console error, and on any request outside the page's own files.
-- `tests/fixtures.js` holds the shared fixtures and helpers. `tests/offline.spec.js` serves a copy of `site/` over HTTP instead (`tests/static-server.js`), the way GitHub Pages does: under `/math-hero/`, with `Cache-Control: max-age=600`.
+- The tests open the app over HTTP from a local server (`tests/static-server.js`) and need no network. They fail on any console error, and on any request outside the page's own files. Not from disk: over `file://`, WebKit refuses to load the manifest and logs an error, and the service worker can't run.
+- `tests/fixtures.js` holds the shared fixtures and helpers. The server behaves like GitHub Pages: the site under `/math-hero/`, with `Cache-Control: max-age=600`. `tests/offline.spec.js` serves a fresh copy of `site/` per test, so a test can change it or cut the network.
 - The tests reach into the page's globals with `page.evaluate`: they call `generateProblem()`, `hintFor()` and `settingsSummary()`, and set `question.startedAt` back to fake a slow question or a 20-second wait instead of installing a fake clock (which would also freeze the 350 ms move to the next question). So keep `site/app.js` a classic script with top-level declarations: no module, no IIFE wrapper.
 
 ## Tailwind

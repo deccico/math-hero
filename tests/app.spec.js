@@ -69,14 +69,14 @@ async function setOperations(page, ...keys) {
 }
 
 // Tailwind and the Fredoka font are bundled in site/, so the page needs no other site.
-test('loads its script, styles and font from its own site only', async ({ page, requests }) => {
+test('loads its script, styles and font from its own site only', async ({ page, requests, appUrl }) => {
   await expect(page.locator('script[src]')).toHaveCount(1);
   await expect(page.locator('script[src="app.js"]')).toHaveCount(1);
   await expect(page.locator('link[rel="stylesheet"][href="tailwind.css"]')).toHaveCount(1);
   await expect(page.locator('#problemDisplay')).toHaveCSS('font-weight', '700');
 
   expect(await loadedFonts(page)).toContain('Fredoka');
-  expect(requests.filter((url) => !url.startsWith('file:'))).toEqual([]);
+  expect(requests.filter((url) => new URL(url).origin !== new URL(appUrl).origin)).toEqual([]);
 });
 
 test('starts on question 1 with an empty scoreboard', async ({ page }) => {
@@ -436,6 +436,76 @@ test('an unreadable history starts empty', async ({ page }) => {
 
   await expect(page.locator('#statGames')).toHaveText('0');
   await expect(page.locator('#historyEmpty')).toBeVisible();
+});
+
+test('a game can be 5 questions long', async ({ page }) => {
+  await openSettings(page);
+  await page.locator('#questionsSelect').selectOption('5');
+  await page.locator('#settingsDoneBtn').click();
+
+  await expect(page.locator('#questionTotal')).toHaveText('5');
+  await finishGame(page, { length: 5 });
+  await expect(page.locator('#resultScore')).toHaveText('5 of 5 right first time');
+});
+
+test('changing the game length starts a new game', async ({ page }) => {
+  await answerCorrectly(page);
+  await expect(page.locator('#questionCount')).toHaveText('2');
+
+  await openSettings(page);
+  await page.locator('#questionsSelect').selectOption('20');
+  await page.locator('#settingsDoneBtn').click();
+
+  await expect(page.locator('#questionCount')).toHaveText('1');
+  await expect(page.locator('#questionTotal')).toHaveText('20');
+});
+
+test('the timer shows only when turned on', async ({ page }) => {
+  await expect(page.locator('#timerBox')).toBeHidden();
+
+  await openSettings(page);
+  await page.locator('#timerToggle').check();
+  await page.locator('#settingsDoneBtn').click();
+  await page.evaluate(() => { round.startedAt -= 65_000; });
+
+  await expect(page.locator('#timerBox')).toBeVisible();
+  await expect(page.locator('#timerDisplay')).toHaveText(/^1:0\d$/);
+});
+
+test('with the timer on, the results say whether the time is a new best', async ({ page }) => {
+  await openSettings(page);
+  await page.locator('#timerToggle').check();
+  // An earlier game with the same settings that took 10 minutes
+  await seedHistory(page, [{ right: 10, seconds: 60 }]);
+
+  await finishGame(page);
+  await expect(page.locator('#resultBest')).toHaveText('New best time!');
+
+  await page.locator('#playAgainBtn').click();
+  await page.evaluate(() => { round.startedAt -= 900_000; });
+  await finishGame(page);
+  await expect(page.locator('#resultBest')).toHaveText(/^Best: 0:\d\d$/);
+});
+
+test('without the timer, the results say nothing about a best time', async ({ page }) => {
+  await finishGame(page);
+
+  await expect(page.locator('#resultTime')).toBeVisible();
+  await expect(page.locator('#resultBest')).toBeHidden();
+});
+
+test('settings saved before the newer options existed still load', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('math-hero-settings', JSON.stringify({
+    subtract: true, add: true, firstMin: 5, firstMax: 30, secondMin: 1, secondMax: 9, crossTen: false, questions: 7,
+  })));
+  await page.reload();
+
+  await openSettings(page);
+  await expect(page.locator('#addToggle')).toBeChecked();
+  await expect(page.locator('#firstMin')).toHaveValue('5');
+  // 7 is not one of the choices, so the game keeps its usual length
+  await expect(page.locator('#questionsSelect')).toHaveValue('10');
+  await expect(page.locator('#timerToggle')).not.toBeChecked();
 });
 
 test('default settings give teen subtractions that need borrowing', async ({ page }) => {

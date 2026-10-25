@@ -1,7 +1,7 @@
 # Math Hero: rules
 
 ## Game
-- A game is 10 questions. A correct answer scores and moves to the next question; a wrong one resets the streak and stays on the question. The solved total carries over between games.
+- A game is 5, 10 (the default) or 20 questions, set in Settings. A correct answer scores and moves to the next question; a wrong one resets the streak and stays on the question. The solved total carries over between games.
 - A right answer counts as soon as it is typed, with no Enter needed. A wrong answer counts only when Enter is pressed or the Check button is tapped (for keyboards with no Enter key, like the iPhone number keypad), so a half-typed answer (the 1 of 13) is never marked wrong.
 - Typing and Enter are ignored while the app moves to the next question, so one answer never counts twice.
 
@@ -25,7 +25,7 @@
 - Every finished round is saved on the device (`localStorage`, key `math-hero-history`), the latest 100 kept: its date, the settings it was played with, its time, and each question (the problem, wrong answers, hint, answer shown, time). Unreadable saved progress starts empty.
 - The Progress screen opens from the results and from Settings, and Back returns there. It shows:
   - totals over games (practice rounds excluded): games played, the share of questions right first time, and the average time per question;
-  - the trend for the current settings: of the latest 10 games played with the same problem settings, the older half against the newer half, once there are at least 4;
+  - the trend for the current settings: of the latest 10 games played with the same problem settings and length, the older half against the newer half, once there are at least 4;
   - every saved round, newest first, including practice rounds. Opening one shows its review, the same as the results screen would have.
 
 ## Problems
@@ -38,7 +38,8 @@
 ## Settings
 - Operations: Subtraction and Addition, as checkboxes. At least one stays ticked; unticking the last one is undone.
 - Ranges: lowest and highest for the first number and for the second number, whole numbers from 0 to 99. A value outside 0-99 is pulled in to the nearest limit, and a blank one keeps the previous value. Moving one end of a range past the other moves the other end with it.
-- Defaults are the original game: subtraction only, first number 11-19, second number 1-9, must cross ten.
-- Changes apply at once and start a new problem, keeping the question number.
+- Game: the number of questions (5, 10 or 20) and "Show a timer", off by default because time pressure can stress young children. With the timer on, the game shows the time so far, and the results add "New best time!" or the best time of earlier games with the same settings.
+- Defaults are the original game: subtraction only, first number 11-19, second number 1-9, must cross ten, 10 questions, no timer.
+- Changes apply at once and start a new problem, keeping the question number. Changing the number of questions starts a new game instead. Turning the timer on or off keeps the problem.
 - Settings that leave no problem show a warning, keep the previous settings in use, and disable Done until fixed. If only one of two ticked operations has problems, a note says only the other will appear.
-- Settings are saved on the device (`localStorage`, key `math-hero-settings`). Saved settings that can't be read, or that leave no problem, are replaced by the defaults.
+- Settings are saved on the device (`localStorage`, key `math-hero-settings`). Saved settings that can't be read, or that leave no problem, are replaced by the defaults; a setting that is missing (saved by an older version) or not one of the choices gets its default.
