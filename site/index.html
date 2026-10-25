@@ -314,6 +314,15 @@
     // Initialize the first problem on load
     generateProblem();
 
+    // Offline support (sw.js): the newest version when online, the stored one when offline.
+    // Service workers need http(s), so opening the file from disk skips this.
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .catch((err) => console.error('Offline support unavailable:', err));
+      });
+    }
+
   </script>
 </body>
 </html>
