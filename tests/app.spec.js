@@ -2,15 +2,28 @@ const {
   test, expect, MAX_QUESTIONS, parseProblem, solve, readProblem, answer, answerCorrectly, loadedFonts,
 } = require('./fixtures');
 
-// Answers every question, waiting for each one to advance before the next.
-async function finishGame(page) {
-  for (let question = 1; question <= MAX_QUESTIONS; question++) {
+// Answers every question of the round, waiting for each one to advance before the next.
+// Questions numbered in `miss` (from 1) get one wrong answer first; returns those problems.
+async function finishGame(page, { miss = [], length = MAX_QUESTIONS } = {}) {
+  const missed = [];
+  for (let question = 1; question <= length; question++) {
+    if (miss.includes(question)) {
+      const problem = await readProblem(page);
+      missed.push(`${problem.a} ${problem.op} ${problem.b}`);
+      await answer(page, solve(problem) + 1);
+    }
     await answerCorrectly(page);
-    if (question < MAX_QUESTIONS) {
+    if (question < length) {
       await expect(page.locator('#questionCount')).toHaveText(String(question + 1));
     }
   }
   await expect(page.locator('#celebrationScreen')).toBeVisible();
+  return missed;
+}
+
+// The problems listed for review on the results screen, as "13 - 5".
+async function reviewedProblems(page) {
+  return page.locator('#reviewList li').evaluateAll((items) => items.map((item) => item.dataset.problem));
 }
 
 // Generates many problems with the current settings and returns them parsed.
@@ -178,6 +191,79 @@ test('play again restarts at question 1 and keeps the solved total', async ({ pa
   await expect(page.locator('#streakCount')).toHaveText('0');
   await expect(page.locator('#totalCount')).toHaveText(String(MAX_QUESTIONS));
   await expect(page.locator('#answerInput')).toBeFocused();
+});
+
+test('the results show the first-try score, the time and the problems that needed more tries', async ({ page }) => {
+  const missed = await finishGame(page, { miss: [1, 4] });
+
+  await expect(page.locator('#resultScore')).toHaveText('8 of 10 right first time');
+  await expect(page.locator('#resultTime')).toHaveText(/^Time: \d+:\d{2}$/);
+  expect(await reviewedProblems(page)).toEqual(missed);
+  await expect(page.locator('#reviewList li').first()).toContainText('You tried');
+  await expect(page.locator('#practiceBtn')).toBeVisible();
+});
+
+test('a perfect game has nothing to review', async ({ page }) => {
+  await finishGame(page);
+
+  await expect(page.locator('#resultScore')).toHaveText('10 of 10 right first time');
+  await expect(page.locator('#reviewBox')).toBeHidden();
+  await expect(page.locator('#practiceBtn')).toBeHidden();
+});
+
+test('a question that took much longer than the rest is in the review', async ({ page }) => {
+  // Started 30 seconds ago, against about a second for the others.
+  await page.evaluate(() => { question.startedAt -= 30_000; });
+  const slow = await readProblem(page);
+
+  await finishGame(page);
+
+  await expect(page.locator('#resultScore')).toHaveText('10 of 10 right first time');
+  expect(await reviewedProblems(page)).toEqual([`${slow.a} ${slow.op} ${slow.b}`]);
+  await expect(page.locator('#reviewList li')).toContainText('Took 30 s');
+});
+
+test('Practice these again asks exactly the problems to review, until none are left', async ({ page }) => {
+  const missed = await finishGame(page, { miss: [2, 5, 9] });
+
+  await page.locator('#practiceBtn').click();
+  await expect(page.locator('#roundLabel')).toHaveText('Practice');
+  await expect(page.locator('#questionTotal')).toHaveText('3');
+  const asked = [];
+  for (let question = 1; question <= 3; question++) {
+    const problem = await readProblem(page);
+    asked.push(`${problem.a} ${problem.op} ${problem.b}`);
+    // Miss the first practice problem again.
+    if (question === 1) await answer(page, solve(problem) + 1);
+    await answerCorrectly(page);
+    if (question < 3) await expect(page.locator('#questionCount')).toHaveText(String(question + 1));
+  }
+  expect([...asked].sort()).toEqual([...missed].sort());
+  await expect(page.locator('#resultScore')).toHaveText('2 of 3 right first time');
+  expect(await reviewedProblems(page)).toEqual([asked[0]]);
+
+  await page.locator('#practiceBtn').click();
+  await expect(page.locator('#questionTotal')).toHaveText('1');
+  await answerCorrectly(page);
+  await expect(page.locator('#resultScore')).toHaveText('1 of 1 right first time');
+  await expect(page.locator('#practiceBtn')).toBeHidden();
+
+  await page.locator('#playAgainBtn').click();
+  await expect(page.locator('#roundLabel')).toHaveText('Question');
+  await expect(page.locator('#questionTotal')).toHaveText(String(MAX_QUESTIONS));
+});
+
+test('changing a setting during practice starts a fresh game', async ({ page }) => {
+  await finishGame(page, { miss: [1] });
+  await page.locator('#practiceBtn').click();
+
+  await openSettings(page);
+  await page.locator('#addToggle').check();
+  await page.locator('#settingsDoneBtn').click();
+
+  await expect(page.locator('#roundLabel')).toHaveText('Question');
+  await expect(page.locator('#questionCount')).toHaveText('1');
+  await expect(page.locator('#questionTotal')).toHaveText(String(MAX_QUESTIONS));
 });
 
 test('default settings give teen subtractions that need borrowing', async ({ page }) => {

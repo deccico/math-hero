@@ -2,15 +2,18 @@
 // index.html, so the page's elements exist and the functions are globals the tests can call.
 
 // App State
-let currentA = 0;
-let currentB = 0;
-let currentOp = null;
 let streak = 0;
 let totalSolved = 0;
-let currentQuestion = 1;
 let advancing = false; // True while a correct answer waits for the next problem
 let currentScreen = 'game';
-const maxQuestions = 10;
+// The round being played: a game of new problems, or practice of problems to look at again.
+// Its questions are the ones answered so far.
+let round = null;
+// The question on screen: { a, op, b, answer, wrong: [answers], hinted, revealed, startedAt, seconds }
+let question = null;
+const GAME_LENGTH = 10;
+// A question is slow when it took longer than this, and more than twice the round's median
+const SLOW_SECONDS = 10;
 
 // Settings, remembered on this device. The defaults are the original game: a teen minus one digit, with borrowing.
 const SETTINGS_KEY = 'math-hero-settings';
@@ -31,7 +34,16 @@ const streakCount = document.getElementById('streakCount');
 const totalCount = document.getElementById('totalCount');
 const appCard = document.getElementById('appCard');
 const questionCount = document.getElementById('questionCount');
+const questionTotal = document.getElementById('questionTotal');
+const roundLabel = document.getElementById('roundLabel');
 const playAgainBtn = document.getElementById('playAgainBtn');
+const practiceBtn = document.getElementById('practiceBtn');
+const resultEmoji = document.getElementById('resultEmoji');
+const resultTitle = document.getElementById('resultTitle');
+const resultScore = document.getElementById('resultScore');
+const resultTime = document.getElementById('resultTime');
+const reviewBox = document.getElementById('reviewBox');
+const reviewList = document.getElementById('reviewList');
 const checkBtn = document.getElementById('checkBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsDoneBtn = document.getElementById('settingsDoneBtn');
@@ -167,7 +179,9 @@ function handleSettingsChange(e) {
   if (settingsProblem(next).usable) {
     settings = next;
     saveSettings();
-    generateProblem();
+    // Practice problems may not fit the new settings, so a change during practice starts a game
+    if (round.kind === 'practice') startRound('game');
+    else generateProblem();
   }
 }
 
@@ -178,7 +192,20 @@ function showScreen(name) {
   currentScreen = name;
 }
 
-// Logic to generate the next math problem based on the settings
+function problemText({ a, op, b }) {
+  return `${a} ${op} ${b}`;
+}
+
+// Puts a problem ({ a, op, b }) on screen as the question, replacing any unanswered one
+function ask({ a, op, b }) {
+  const operation = OPERATIONS.find((o) => o.symbol === op);
+  question = { a, op, b, answer: operation.solve(a, b), wrong: [], hinted: false, revealed: false, startedAt: Date.now(), seconds: 0 };
+  problemDisplay.textContent = problemText(question);
+  answerInput.value = '';
+  answerInput.focus();
+}
+
+// Asks a new problem that fits the settings
 function generateProblem() {
   const pools = problemPools(settings).filter((pool) => pool.problems.length > 0);
   const total = pools.reduce((sum, pool) => sum + pool.problems.length, 0);
@@ -189,21 +216,116 @@ function generateProblem() {
     const pool = pools[getRandomInt(0, pools.length - 1)];
     op = pool.op;
     [a, b] = pool.problems[getRandomInt(0, pool.problems.length - 1)];
-  } while (total > 1 && op === currentOp && a === currentA && b === currentB);
+  } while (total > 1 && question && op.symbol === question.op && a === question.a && b === question.b);
+  ask({ a, op: op.symbol, b });
+}
 
-  currentA = a;
-  currentB = b;
-  currentOp = op;
+function shuffled(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = getRandomInt(0, i);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
 
-  // Update UI
-  problemDisplay.textContent = `${currentA} ${currentOp.symbol} ${currentB}`;
-  answerInput.value = '';
-  answerInput.focus();
+// Starts a round: a game, or practice of the given problems in a random order
+function startRound(kind, problems = []) {
+  round = {
+    kind,
+    practice: shuffled(problems),
+    length: kind === 'practice' ? problems.length : GAME_LENGTH,
+    questions: [],
+    startedAt: Date.now(),
+  };
+  streak = 0;
+  streakCount.textContent = streak;
+  roundLabel.textContent = kind === 'practice' ? 'Practice' : 'Question';
+  questionTotal.textContent = round.length;
+  nextQuestion();
+}
+
+function nextQuestion() {
+  questionCount.textContent = round.questions.length + 1;
+  if (round.kind === 'practice') ask(round.practice[round.questions.length]);
+  else generateProblem();
+}
+
+// Right the first time, with no hint
+function firstTry(q) {
+  return q.wrong.length === 0 && !q.hinted && !q.revealed;
+}
+
+function median(values) {
+  const sorted = [...values].sort((x, y) => x - y);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+// "7", "7 and 9", "7, 9 and 12"
+function listAnswers(values) {
+  return values.length === 1 ? String(values[0]) : `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
+}
+
+// The questions worth another look, each with why: not right first time, or much slower than the rest
+function reviewOf(questions) {
+  const slow = Math.max(SLOW_SECONDS, 2 * median(questions.map((q) => q.seconds)));
+  return questions.map((q) => {
+    const reasons = [];
+    if (q.wrong.length > 0) reasons.push(`You tried ${listAnswers(q.wrong)}`);
+    if (q.hinted) reasons.push('Used a hint');
+    if (q.revealed) reasons.push('Answer shown');
+    if (q.seconds > slow) reasons.push(`Took ${Math.round(q.seconds)} s`);
+    return { question: q, reasons };
+  }).filter((item) => item.reasons.length > 0);
+}
+
+// "1:05"
+function formatTime(seconds) {
+  const whole = Math.round(seconds);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+
+function reviewItem({ question: q, reasons }) {
+  const item = document.createElement('li');
+  item.dataset.problem = problemText(q);
+  item.className = 'flex items-center justify-between gap-3 rounded-2xl border-2 border-rose-100 bg-rose-50 px-4 py-2';
+  const sum = document.createElement('span');
+  sum.className = 'text-2xl font-bold text-slate-800 whitespace-nowrap';
+  sum.textContent = `${problemText(q)} = ${q.answer}`;
+  const why = document.createElement('span');
+  why.className = 'text-sm font-semibold text-rose-700 text-right';
+  why.textContent = reasons.join(' · ');
+  item.append(sum, why);
+  return item;
+}
+
+// Shows the results of a finished round, with the problems to practise
+function showResults(kind, questions, seconds) {
+  const right = questions.filter(firstTry).length;
+  const total = questions.length;
+  const perfect = right === total;
+  round.review = reviewOf(questions);
+
+  resultEmoji.textContent = perfect ? '🏆' : right >= total * 0.7 ? '🌟' : '💪';
+  resultTitle.textContent = kind === 'practice' ? 'Practice done!' : perfect ? 'Perfect!' : 'You did it!';
+  resultScore.textContent = `${right} of ${total} right first time`;
+  resultTime.textContent = `Time: ${formatTime(seconds)}`;
+  reviewList.replaceChildren(...round.review.map(reviewItem));
+  reviewBox.classList.toggle('hidden', round.review.length === 0);
+  practiceBtn.classList.toggle('hidden', round.review.length === 0);
+  showScreen('celebration');
+}
+
+function finishRound() {
+  showResults(round.kind, round.questions, (Date.now() - round.startedAt) / 1000);
 }
 
 // Handle correct answer visually
 function handleSuccess() {
   advancing = true;
+  question.seconds = (Date.now() - question.startedAt) / 1000;
+  round.questions.push(question);
   streak++;
   totalSolved++;
 
@@ -219,18 +341,17 @@ function handleSuccess() {
     appCard.classList.remove('success-flash', 'animate-pop');
     advancing = false;
 
-    if (currentQuestion >= maxQuestions) {
-      showScreen('celebration');
+    if (round.questions.length >= round.length) {
+      finishRound();
     } else {
-      currentQuestion++;
-      questionCount.textContent = currentQuestion;
-      generateProblem();
+      nextQuestion();
     }
   }, 350);
 }
 
 // Handle wrong answer visually
-function handleError() {
+function handleError(wrongAnswer) {
+  question.wrong.push(wrongAnswer);
   streak = 0;
   streakCount.textContent = streak;
 
@@ -258,7 +379,7 @@ function typedAnswer() {
 }
 
 function isRight(answer) {
-  return answer === currentOp.solve(currentA, currentB);
+  return answer === question.answer;
 }
 
 // A right answer counts as soon as it is typed; a wrong one only when Enter is pressed.
@@ -278,7 +399,7 @@ function submitAnswer() {
   if (isRight(userAnswer)) {
     handleSuccess();
   } else {
-    handleError();
+    handleError(userAnswer);
   }
 }
 
@@ -305,16 +426,15 @@ settingsDoneBtn.addEventListener('click', () => {
   answerInput.focus();
 });
 
-// Handle Play Again button click
+// Play Again starts a new game; Practice these again, a round of the problems under review
 playAgainBtn.addEventListener('click', () => {
-  currentQuestion = 1;
-  streak = 0;
-  questionCount.textContent = currentQuestion;
-  streakCount.textContent = streak;
-
   showScreen('game');
+  startRound('game');
+});
 
-  generateProblem();
+practiceBtn.addEventListener('click', () => {
+  showScreen('game');
+  startRound('practice', round.review.map((item) => item.question));
 });
 
 // During a game, keep the answer box focused when the background is clicked
@@ -324,8 +444,8 @@ document.body.addEventListener('click', (e) => {
   }
 });
 
-// Initialize the first problem on load
-generateProblem();
+// Start the first game on load
+startRound('game');
 
 // Offline support (sw.js): the newest version when online, the stored one when offline.
 // Service workers need http(s), so opening the file from disk skips this.
