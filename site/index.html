@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Math Hero: Subtraction Practice</title>
+  <title>Math Hero: Addition and Subtraction Practice</title>
   <!-- Tailwind CSS and the kid-friendly Fredoka font (fonts/), compiled from src/tailwind.css by `npm run build:css`: never edit tailwind.css by hand -->
   <link rel="stylesheet" href="tailwind.css">
   
@@ -107,22 +107,56 @@
         >
       </div>
 
-      <!-- Settings Controls -->
-      <div class="bg-slate-50 rounded-2xl p-4 border-2 border-slate-100">
-        <h3 class="text-slate-500 font-bold mb-3 uppercase text-sm tracking-wide text-center">Settings</h3>
-
-        <label class="flex items-center space-x-3 mb-3 cursor-pointer group">
-          <input type="checkbox" id="teensToggle" checked class="w-6 h-6 text-indigo-600 rounded-lg border-2 border-slate-300 focus:ring-indigo-500 focus:ring-2 cursor-pointer">
-          <span class="text-slate-700 font-semibold text-lg group-hover:text-indigo-600 transition-colors">Limit to teens (11 - 19)</span>
-        </label>
-
-        <label class="flex items-center space-x-3 cursor-pointer group">
-          <input type="checkbox" id="borrowToggle" checked class="w-6 h-6 text-indigo-600 rounded-lg border-2 border-slate-300 focus:ring-indigo-500 focus:ring-2 cursor-pointer">
-          <span class="text-slate-700 font-semibold text-lg group-hover:text-indigo-600 transition-colors">Must require borrowing <br><span class="text-sm text-slate-400 font-normal">(e.g., 12 - 7)</span></span>
-        </label>
+      <!-- Settings Button -->
+      <div class="text-center">
+        <button id="settingsBtn" type="button" class="px-4 py-2 rounded-full text-slate-400 font-semibold text-lg hover:text-indigo-600 hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-indigo-100 transition-colors">⚙️ Settings</button>
       </div>
 
     </div> <!-- End Game Screen -->
+
+    <!-- Settings Screen: changes apply at once and are remembered on this device -->
+    <div id="settingsScreen" class="hidden">
+      <h2 class="text-3xl font-bold text-slate-800 text-center mb-6">Settings</h2>
+
+      <h3 class="text-slate-500 font-bold mb-3 uppercase text-sm tracking-wide">Practice</h3>
+      <div class="flex flex-wrap gap-x-8 gap-y-3 mb-6">
+        <label class="flex items-center space-x-3 cursor-pointer group">
+          <input type="checkbox" id="subtractToggle" class="w-6 h-6 text-indigo-600 rounded-lg border-2 border-slate-300 focus:ring-indigo-500 focus:ring-2 cursor-pointer">
+          <span class="text-slate-700 font-semibold text-lg group-hover:text-indigo-600 transition-colors">Subtraction (-)</span>
+        </label>
+        <label class="flex items-center space-x-3 cursor-pointer group">
+          <input type="checkbox" id="addToggle" class="w-6 h-6 text-indigo-600 rounded-lg border-2 border-slate-300 focus:ring-indigo-500 focus:ring-2 cursor-pointer">
+          <span class="text-slate-700 font-semibold text-lg group-hover:text-indigo-600 transition-colors">Addition (+)</span>
+        </label>
+      </div>
+
+      <h3 class="text-slate-500 font-bold mb-3 uppercase text-sm tracking-wide">Numbers (0 to 99)</h3>
+      <div class="space-y-4 mb-6">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span class="basis-full sm:basis-auto sm:w-36 text-slate-700 font-semibold text-lg">First number</span>
+            <input type="number" id="firstMin" aria-label="First number, lowest" min="0" max="99" inputmode="numeric" class="w-20 text-center text-2xl font-bold py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100">
+            <span class="text-slate-500 font-semibold">to</span>
+            <input type="number" id="firstMax" aria-label="First number, highest" min="0" max="99" inputmode="numeric" class="w-20 text-center text-2xl font-bold py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100">
+          </div>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span class="basis-full sm:basis-auto sm:w-36 text-slate-700 font-semibold text-lg">Second number</span>
+            <input type="number" id="secondMin" aria-label="Second number, lowest" min="0" max="99" inputmode="numeric" class="w-20 text-center text-2xl font-bold py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100">
+            <span class="text-slate-500 font-semibold">to</span>
+            <input type="number" id="secondMax" aria-label="Second number, highest" min="0" max="99" inputmode="numeric" class="w-20 text-center text-2xl font-bold py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100">
+          </div>
+      </div>
+
+      <label class="flex items-center space-x-3 cursor-pointer group mb-6">
+        <input type="checkbox" id="crossTenToggle" class="w-6 h-6 text-indigo-600 rounded-lg border-2 border-slate-300 focus:ring-indigo-500 focus:ring-2 cursor-pointer">
+        <span class="text-slate-700 font-semibold text-lg group-hover:text-indigo-600 transition-colors">Must cross ten <br><span class="text-sm text-slate-400 font-normal">(borrowing: 12 - 7, carrying: 8 + 5)</span></span>
+      </label>
+
+      <p id="settingsWarning" role="status" class="hidden mb-6 rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 text-amber-800 font-semibold"></p>
+
+      <button id="settingsDoneBtn" type="button" class="bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-2xl py-4 px-8 rounded-full shadow-lg transition w-full">
+        Done
+      </button>
+    </div>
 
     <!-- Celebration Screen -->
     <div id="celebrationScreen" class="hidden flex flex-col items-center justify-center py-6 text-center">
@@ -141,66 +175,198 @@
     // App State
     let currentA = 0;
     let currentB = 0;
+    let currentOp = null;
     let streak = 0;
     let totalSolved = 0;
     let currentQuestion = 1;
     let advancing = false; // True while a correct answer waits for the next problem
+    let currentScreen = 'game';
     const maxQuestions = 10;
+
+    // Settings, remembered on this device. The defaults are the original game: a teen minus one digit, with borrowing.
+    const SETTINGS_KEY = 'math-hero-settings';
+    const DEFAULT_SETTINGS = { subtract: true, add: false, firstMin: 11, firstMax: 19, secondMin: 1, secondMax: 9, crossTen: true };
+    const LOWEST_NUMBER = 0;
+    const HIGHEST_NUMBER = 99;
+    // Each number range, as its lowest and highest setting
+    const RANGES = [['firstMin', 'firstMax'], ['secondMin', 'secondMax']];
+    const OPERATIONS = [
+      { key: 'subtract', symbol: '-', name: 'subtraction', solve: (a, b) => a - b },
+      { key: 'add', symbol: '+', name: 'addition', solve: (a, b) => a + b },
+    ];
 
     // DOM Elements
     const problemDisplay = document.getElementById('problemDisplay');
     const answerInput = document.getElementById('answerInput');
     const streakCount = document.getElementById('streakCount');
     const totalCount = document.getElementById('totalCount');
-    const teensToggle = document.getElementById('teensToggle');
-    const borrowToggle = document.getElementById('borrowToggle');
     const appCard = document.getElementById('appCard');
-    const gameScreen = document.getElementById('gameScreen');
-    const celebrationScreen = document.getElementById('celebrationScreen');
     const questionCount = document.getElementById('questionCount');
     const playAgainBtn = document.getElementById('playAgainBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsDoneBtn = document.getElementById('settingsDoneBtn');
+    const settingsWarning = document.getElementById('settingsWarning');
+    const screens = {
+      game: document.getElementById('gameScreen'),
+      settings: document.getElementById('settingsScreen'),
+      celebration: document.getElementById('celebrationScreen'),
+    };
+    // The form control for each setting
+    const settingControls = {
+      subtract: document.getElementById('subtractToggle'),
+      add: document.getElementById('addToggle'),
+      firstMin: document.getElementById('firstMin'),
+      firstMax: document.getElementById('firstMax'),
+      secondMin: document.getElementById('secondMin'),
+      secondMax: document.getElementById('secondMax'),
+      crossTen: document.getElementById('crossTenToggle'),
+    };
 
     // Generate a random integer between min and max (inclusive)
     function getRandomInt(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    // Logic to generate the next math problem based on toggles
-    function generateProblem() {
-      const limitToTeens = teensToggle.checked;
-      const requireBorrowing = borrowToggle.checked;
-      
-      let found = false;
-      let a, b;
+    // Crossing ten means borrowing for a subtraction (12 - 7) and carrying for an addition (8 + 5)
+    function crossesTen(op, a, b) {
+      return op.key === 'add' ? (a % 10) + (b % 10) >= 10 : (a % 10) < (b % 10);
+    }
 
-      // Keep guessing numbers until they match our exact requirements
-      while (!found) {
-        // Operand A: 2 digits. If teens only, 11-19. Otherwise, 11-99.
-        a = limitToTeens ? getRandomInt(11, 19) : getRandomInt(11, 99);
-        
-        // Operand B: 1 digit (1-9)
-        b = getRandomInt(1, 9);
-
-        // Subtraction should always result in a positive number
-        if (a <= b) continue;
-
-        // Check borrowing rule
-        const onesDigitOfA = a % 10;
-        const needsToBorrow = onesDigitOfA < b;
-
-        if (requireBorrowing && !needsToBorrow) {
-          continue; // Skip if we require borrowing but this problem doesn't need it
+    // Every problem the settings allow for one operation, as [a, b] pairs
+    function problemsFor(op, s) {
+      const problems = [];
+      for (let a = s.firstMin; a <= s.firstMax; a++) {
+        for (let b = s.secondMin; b <= s.secondMax; b++) {
+          if (op.key === 'subtract' && a < b) continue; // Answers are never negative
+          if (s.crossTen && !crossesTen(op, a, b)) continue;
+          problems.push([a, b]);
         }
-
-        // If we get here, the problem satisfies all conditions
-        found = true;
       }
+      return problems;
+    }
+
+    // The ticked operations, each with the problems it allows
+    function problemPools(s) {
+      return OPERATIONS.filter((op) => s[op.key]).map((op) => ({ op, problems: problemsFor(op, s) }));
+    }
+
+    // Makes settings usable: whole numbers within the limits, each range's lowest no higher than
+    // its highest (the end just edited stays put), and at least one operation ticked
+    function sanitizeSettings(s, editedKey) {
+      const clean = { ...DEFAULT_SETTINGS };
+      for (const key of Object.keys(clean)) {
+        if (typeof clean[key] === 'boolean' && typeof s[key] === 'boolean') clean[key] = s[key];
+        if (typeof clean[key] === 'number' && Number.isInteger(s[key])) {
+          clean[key] = Math.min(HIGHEST_NUMBER, Math.max(LOWEST_NUMBER, s[key]));
+        }
+      }
+      for (const [low, high] of RANGES) {
+        if (clean[low] > clean[high]) {
+          if (editedKey === high) clean[low] = clean[high];
+          else clean[high] = clean[low];
+        }
+      }
+      if (!clean.subtract && !clean.add) clean[editedKey === 'add' ? 'add' : 'subtract'] = true;
+      return clean;
+    }
+
+    // Explains settings that leave an operation, or everything, without problems
+    function settingsProblem(s) {
+      const pools = problemPools(s);
+      const empty = pools.filter((pool) => pool.problems.length === 0);
+      if (empty.length === pools.length) {
+        return { usable: false, message: 'No problems fit these settings. Widen a range, or untick "Must cross ten".' };
+      }
+      if (empty.length > 0) {
+        const other = pools.find((pool) => pool.problems.length > 0);
+        return { usable: true, message: `No ${empty[0].op.name} problems fit these settings, so only ${other.op.name} will appear.` };
+      }
+      return { usable: true, message: '' };
+    }
+
+    function loadSettings() {
+      try {
+        const saved = sanitizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {});
+        if (settingsProblem(saved).usable) return saved;
+      } catch (err) {
+        console.warn('Saved settings could not be read, so the defaults are used:', err);
+      }
+      return { ...DEFAULT_SETTINGS };
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      } catch (err) {
+        console.warn('Settings could not be saved on this device:', err);
+      }
+    }
+
+    let settings = loadSettings();
+
+    function showSettingsInForm(s) {
+      for (const [key, control] of Object.entries(settingControls)) {
+        if (control.type === 'checkbox') control.checked = s[key];
+        else control.value = s[key];
+      }
+      const { usable, message } = settingsProblem(s);
+      settingsWarning.textContent = message;
+      settingsWarning.classList.toggle('hidden', !message);
+      settingsDoneBtn.disabled = !usable;
+    }
+
+    // Reads the form; a blank or unreadable number keeps the value in use
+    function readSettingsForm() {
+      const s = {};
+      for (const [key, control] of Object.entries(settingControls)) {
+        if (control.type === 'checkbox') {
+          s[key] = control.checked;
+        } else {
+          const value = parseInt(control.value, 10);
+          s[key] = Number.isNaN(value) ? settings[key] : value;
+        }
+      }
+      return s;
+    }
+
+    // Applies a settings change at once, unless it leaves no problem to ask
+    function handleSettingsChange(e) {
+      const editedKey = Object.keys(settingControls).find((key) => settingControls[key] === e.target);
+      const next = sanitizeSettings(readSettingsForm(), editedKey);
+      showSettingsInForm(next);
+      if (settingsProblem(next).usable) {
+        settings = next;
+        saveSettings();
+        generateProblem();
+      }
+    }
+
+    function showScreen(name) {
+      for (const [key, screen] of Object.entries(screens)) {
+        screen.classList.toggle('hidden', key !== name);
+      }
+      currentScreen = name;
+    }
+
+    // Logic to generate the next math problem based on the settings
+    function generateProblem() {
+      const pools = problemPools(settings).filter((pool) => pool.problems.length > 0);
+      const total = pools.reduce((sum, pool) => sum + pool.problems.length, 0);
+      let op, a, b;
+      // Pick the operation first, so a mixed game is half of each,
+      // and never ask the same problem twice in a row when there is another
+      do {
+        const pool = pools[getRandomInt(0, pools.length - 1)];
+        op = pool.op;
+        [a, b] = pool.problems[getRandomInt(0, pool.problems.length - 1)];
+      } while (total > 1 && op === currentOp && a === currentA && b === currentB);
 
       currentA = a;
       currentB = b;
-      
+      currentOp = op;
+
       // Update UI
-      problemDisplay.textContent = `${currentA} - ${currentB}`;
+      problemDisplay.textContent = `${currentA} ${currentOp.symbol} ${currentB}`;
       answerInput.value = '';
       answerInput.focus();
     }
@@ -224,8 +390,7 @@
         advancing = false;
         
         if (currentQuestion >= maxQuestions) {
-          gameScreen.classList.add('hidden');
-          celebrationScreen.classList.remove('hidden');
+          showScreen('celebration');
         } else {
           currentQuestion++;
           questionCount.textContent = currentQuestion;
@@ -266,7 +431,7 @@
         // Ignore empty submissions
         if (isNaN(userAnswer)) return;
 
-        const correctAnswer = currentA - currentB;
+        const correctAnswer = currentOp.solve(currentA, currentB);
         
         if (userAnswer === correctAnswer) {
           handleSuccess();
@@ -276,19 +441,19 @@
       }
     });
 
-    // Automatically generate a new problem if settings are changed
-    teensToggle.addEventListener('change', () => {
-      if (!gameScreen.classList.contains('hidden')) {
-        generateProblem();
-        answerInput.focus();
-      }
+    // Settings: the gear opens them, Done goes back to the same question
+    for (const control of Object.values(settingControls)) {
+      control.addEventListener('change', handleSettingsChange);
+    }
+
+    settingsBtn.addEventListener('click', () => {
+      showSettingsInForm(settings);
+      showScreen('settings');
     });
-    
-    borrowToggle.addEventListener('change', () => {
-      if (!gameScreen.classList.contains('hidden')) {
-        generateProblem();
-        answerInput.focus();
-      }
+
+    settingsDoneBtn.addEventListener('click', () => {
+      showScreen('game');
+      answerInput.focus();
     });
 
     // Handle Play Again button click
@@ -298,15 +463,14 @@
       questionCount.textContent = currentQuestion;
       streakCount.textContent = streak;
       
-      celebrationScreen.classList.add('hidden');
-      gameScreen.classList.remove('hidden');
+      showScreen('game');
       
       generateProblem();
     });
 
-    // Ensure focus is kept on the input whenever clicking anywhere on the background
+    // During a game, keep the answer box focused when the background is clicked
     document.body.addEventListener('click', (e) => {
-      if (e.target !== teensToggle && e.target !== borrowToggle && e.target !== playAgainBtn && !gameScreen.classList.contains('hidden')) {
+      if (currentScreen === 'game' && !e.target.closest('button, input, label')) {
         answerInput.focus();
       }
     });

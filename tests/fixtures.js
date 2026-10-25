@@ -4,6 +4,8 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 
 const MAX_QUESTIONS = 10;
+// A problem as displayed: "12 - 7" or "8 + 5".
+const PROBLEM_PATTERN = /^(\d+) ([+-]) (\d+)$/;
 
 // Every test starts on a fresh app and fails if the page threw or logged an error.
 const test = base.extend({
@@ -24,11 +26,18 @@ const test = base.extend({
   },
 });
 
-// Reads the problem on screen ("12 - 7") as its two operands.
+// Splits a displayed problem ("12 - 7") into its numbers and operator.
+function parseProblem(text) {
+  const [, a, op, b] = text.trim().match(PROBLEM_PATTERN);
+  return { a: Number(a), op, b: Number(b) };
+}
+
+function solve({ a, op, b }) {
+  return op === '+' ? a + b : a - b;
+}
+
 async function readProblem(page) {
-  const text = await page.locator('#problemDisplay').textContent();
-  const [a, b] = text.trim().split(' - ').map(Number);
-  return { a, b };
+  return parseProblem(await page.locator('#problemDisplay').textContent());
 }
 
 async function answer(page, value) {
@@ -37,8 +46,7 @@ async function answer(page, value) {
 }
 
 async function answerCorrectly(page) {
-  const { a, b } = await readProblem(page);
-  await answer(page, a - b);
+  await answer(page, solve(await readProblem(page)));
 }
 
 // Names of the font families the page has finished loading.
@@ -49,4 +57,6 @@ async function loadedFonts(page) {
   });
 }
 
-module.exports = { test, expect, MAX_QUESTIONS, readProblem, answer, answerCorrectly, loadedFonts };
+module.exports = {
+  test, expect, MAX_QUESTIONS, PROBLEM_PATTERN, parseProblem, solve, readProblem, answer, answerCorrectly, loadedFonts,
+};

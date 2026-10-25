@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { test: base, expect, answerCorrectly, loadedFonts } = require('./fixtures');
+const { test: base, expect, PROBLEM_PATTERN, answerCorrectly, loadedFonts } = require('./fixtures');
 const { startServer } = require('./static-server');
 
 const SITE = path.join(__dirname, '..', 'site');
@@ -24,7 +24,7 @@ async function waitForOfflineReady(page) {
 }
 
 async function expectPlayable(page) {
-  await expect(page.locator('#problemDisplay')).toHaveText(/^\d{2} - \d$/);
+  await expect(page.locator('#problemDisplay')).toHaveText(PROBLEM_PATTERN);
   await expect(page.locator('#celebrationScreen')).toBeHidden();
   expect(await loadedFonts(page)).toContain('Fredoka');
   await answerCorrectly(page);

@@ -1,6 +1,6 @@
 # Math Hero
 
-Subtraction practice for kids: one static page, `site/index.html`, styled by a compiled Tailwind stylesheet, `site/tailwind.css`, with the Fredoka font in `site/fonts/`. Everything the page loads comes from `site/`.
+Addition and subtraction practice for kids (rules in `specs.md`): one static page, `site/index.html`, styled by a compiled Tailwind stylesheet, `site/tailwind.css`, with the Fredoka font in `site/fonts/`. Everything the page loads comes from `site/`.
 
 ## Test
 - Set up once with `npm install && npx playwright install chromium`, then run `npm test`. It rebuilds `site/tailwind.css` first (`pretest`).
