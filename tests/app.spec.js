@@ -60,13 +60,11 @@ async function sampleProblems(page, count) {
   return texts.map((text) => text.split(' - ').map(Number));
 }
 
-// An unpinned CDN URL can change what the page runs without a commit here.
-test('loads every external script from an exact version', async ({ page }) => {
-  const sources = await page.locator('script[src]').evaluateAll((scripts) => scripts.map((s) => s.src));
-  expect(sources.length).toBeGreaterThan(0);
-  for (const src of sources) {
-    expect(src).toMatch(/\/\d+\.\d+\.\d+$/);
-  }
+// Tailwind is compiled into site/tailwind.css, so the page runs no third-party code.
+test('styles itself from the compiled stylesheet, with no external scripts', async ({ page }) => {
+  await expect(page.locator('script[src]')).toHaveCount(0);
+  await expect(page.locator('link[rel="stylesheet"][href="tailwind.css"]')).toHaveCount(1);
+  await expect(page.locator('#problemDisplay')).toHaveCSS('font-weight', '700');
 });
 
 test('starts on question 1 with an empty scoreboard', async ({ page }) => {

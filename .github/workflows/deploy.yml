@@ -21,6 +21,9 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test
+      # npm test rebuilds site/tailwind.css, so a diff here means the committed copy is stale.
+      - name: Check site/tailwind.css is up to date
+        run: git diff --exit-code site/tailwind.css || { echo "::error file=site/tailwind.css::Stale compiled CSS. Run npm run build:css and commit site/tailwind.css."; exit 1; }
 
   # Publishes site/ to GitHub Pages, only from master and only after the tests pass.
   deploy:
